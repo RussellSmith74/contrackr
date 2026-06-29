@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { ArrowRight, Star, Shield, CheckCircle, MapPin, Clock, ChevronRight, Zap, Users, Briefcase } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
@@ -42,7 +44,10 @@ const MOCK_FEED = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/feed");
   return (
     <div className="min-h-screen bg-white">
       <Navbar />

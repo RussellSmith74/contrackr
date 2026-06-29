@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   MapPin,
   Phone,
@@ -74,6 +74,7 @@ type Tab = "posts" | "photos" | "reviews" | "jobs";
 
 export default function ContractorProfilePage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("posts");
   const [contractor, setContractor] = useState<ContractorProfile | null>(null);
   const [photos, setPhotos] = useState<ContractorPhoto[]>([]);
@@ -81,6 +82,35 @@ export default function ContractorProfilePage() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [messaging, setMessaging] = useState(false);
+
+  const startConversation = useCallback(async () => {
+    if (!contractor) return;
+    setMessaging(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
+
+    // Upsert conversation (customer_id = current user, contractor_id = this contractor profile)
+    const { data: existing } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("customer_id", user.id)
+      .eq("contractor_id", contractor.id)
+      .single();
+
+    if (existing) {
+      router.push("/messages");
+      return;
+    }
+
+    await supabase.from("conversations").insert({
+      customer_id: user.id,
+      contractor_id: contractor.id,
+    });
+
+    router.push("/messages");
+  }, [contractor, router]);
 
   useEffect(() => {
     async function load() {
@@ -198,12 +228,10 @@ export default function ContractorProfilePage() {
                 )}
               </div>
               <div className="flex gap-2 mt-10">
-                <Link href="/messages">
-                  <Button variant="outline" size="md">
-                    <MessageSquare size={16} />
-                    Message
-                  </Button>
-                </Link>
+                <Button variant="outline" size="md" onClick={startConversation} loading={messaging}>
+                  <MessageSquare size={16} />
+                  Message
+                </Button>
                 <Link href="/post-job">
                   <Button variant="primary" size="md">
                     Hire Now
@@ -472,12 +500,10 @@ export default function ContractorProfilePage() {
                   Post a Job
                 </Button>
               </Link>
-              <Link href="/messages">
-                <Button variant="ghost" size="md" fullWidth className="mt-2 text-white hover:bg-white/10">
-                  <MessageSquare size={16} />
-                  Send a Message
-                </Button>
-              </Link>
+              <Button variant="ghost" size="md" fullWidth className="mt-2 text-white hover:bg-white/10" onClick={startConversation} loading={messaging}>
+                <MessageSquare size={16} />
+                Send a Message
+              </Button>
             </div>
           </div>
         </div>

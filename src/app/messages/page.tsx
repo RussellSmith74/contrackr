@@ -1,117 +1,230 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Search, Phone, MoreVertical, ArrowLeft } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Search, ArrowLeft, MessageSquare } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
-
-const MOCK_CONVERSATIONS = [
-  {
-    id: "1",
-    name: "Marcus T.",
-    preview: "Sounds good — when can you start?",
-    time: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    unread: 2,
-    jobContext: "Backyard landscaping overhaul",
-  },
-  {
-    id: "2",
-    name: "Patricia M.",
-    preview: "What wood do you recommend for the fence?",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    unread: 1,
-    jobContext: "Full exterior fence installation",
-  },
-  {
-    id: "3",
-    name: "James H.",
-    preview: "Do you have photos of past sod work?",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    unread: 0,
-    jobContext: "Sod installation — front yard",
-  },
-  {
-    id: "4",
-    name: "Denise W.",
-    preview: "Perfect, we'll see you Friday then.",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    unread: 0,
-    jobContext: "Driveway pressure wash",
-  },
-];
-
-type Message = {
+interface Conversation {
   id: string;
-  senderId: string;
-  content: string;
-  time: string;
-};
+  last_message: string | null;
+  last_message_at: string | null;
+  created_at: string;
+  other_name: string;
+  other_id: string;
+  job_title: string | null;
+}
 
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  "1": [
-    { id: "1", senderId: "marcus", content: "Hey, I saw your profile and your work looks great. I posted a landscaping job — the backyard needs a full overhaul.", time: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-    { id: "2", senderId: "me", content: "Thanks Marcus! I saw your post — about a half acre, right? I can definitely help with that. Can I come take a look this week?", time: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
-    { id: "3", senderId: "marcus", content: "Yes exactly. Wednesday afternoon work for you?", time: new Date(Date.now() - 1000 * 60 * 20).toISOString() },
-    { id: "4", senderId: "me", content: "Wednesday at 2pm works perfectly. I'll bring some samples of the sod and shrub options we typically use.", time: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
-    { id: "5", senderId: "marcus", content: "Sounds good — when can you start?", time: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  ],
-  "2": [
-    { id: "1", senderId: "patricia", content: "Hi! I posted a job for a full fence around my property — about 200 linear feet.", time: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString() },
-    { id: "2", senderId: "me", content: "Hi Patricia! Happy to help with that. Do you have a preference on material — wood, vinyl, chain link, or wrought iron?", time: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-    { id: "3", senderId: "patricia", content: "What wood do you recommend for the fence?", time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-  ],
-};
+interface Message {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+}
 
 export default function MessagesPage() {
-  const [activeConv, setActiveConv] = useState<string | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
   const [search, setSearch] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loadingConvs, setLoadingConvs] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const activeConvData = activeConv ? MOCK_CONVERSATIONS.find((c) => c.id === activeConv) : null;
-  const activeMessages = activeConv ? (messages[activeConv] || []) : [];
+  // Load current user
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setMyId(data.user.id);
+    });
+  }, []);
 
-  const filteredConvs = MOCK_CONVERSATIONS.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.jobContext.toLowerCase().includes(search.toLowerCase())
-  );
+  // Load conversations
+  const loadConversations = useCallback(async () => {
+    if (!myId) return;
+    const supabase = createClient();
+
+    // Get contractor profile id for this user if they are a contractor
+    const { data: cp } = await supabase
+      .from("contractor_profiles")
+      .select("id")
+      .eq("user_id", myId)
+      .single();
+
+    const contractorId = cp?.id ?? null;
+
+    // Fetch conversations where user is customer or contractor
+    const { data: convs } = await supabase
+      .from("conversations")
+      .select(`
+        id, last_message, last_message_at, created_at,
+        customer:profiles!conversations_customer_id_fkey ( id, full_name ),
+        contractor:contractor_profiles!conversations_contractor_id_fkey (
+          id, business_name,
+          profiles ( id, full_name )
+        ),
+        job_posts ( title )
+      `)
+      .or(
+        contractorId
+          ? `customer_id.eq.${myId},contractor_id.eq.${contractorId}`
+          : `customer_id.eq.${myId}`
+      )
+      .order("last_message_at", { ascending: false, nullsFirst: false });
+
+    if (!convs) return;
+
+    const mapped: Conversation[] = convs.map((c: unknown) => {
+      const conv = c as {
+        id: string;
+        last_message: string | null;
+        last_message_at: string | null;
+        created_at: string;
+        customer: { id: string; full_name: string } | null;
+        contractor: {
+          id: string;
+          business_name: string;
+          profiles: { id: string; full_name: string } | null;
+        } | null;
+        job_posts: { title: string } | null;
+      };
+
+      const customerUserId = conv.customer?.id;
+      const contractorUserId = conv.contractor?.profiles?.id;
+      const isCustomer = customerUserId === myId;
+
+      const other_name = isCustomer
+        ? (conv.contractor?.business_name ?? "Contractor")
+        : (conv.customer?.full_name ?? "Customer");
+
+      const other_id = isCustomer
+        ? (contractorUserId ?? "")
+        : (customerUserId ?? "");
+
+      return {
+        id: conv.id,
+        last_message: conv.last_message,
+        last_message_at: conv.last_message_at,
+        created_at: conv.created_at,
+        other_name,
+        other_id,
+        job_title: conv.job_posts?.title ?? null,
+      };
+    });
+
+    setConversations(mapped);
+    setLoadingConvs(false);
+  }, [myId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeMessages]);
+    if (myId) loadConversations();
+  }, [myId, loadConversations]);
 
-  const sendMessage = () => {
-    if (!input.trim() || !activeConv) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      senderId: "me",
-      content: input.trim(),
-      time: new Date().toISOString(),
+  // Load messages for active conversation
+  const loadMessages = useCallback(async (convId: string) => {
+    const { data } = await createClient()
+      .from("messages")
+      .select("id, sender_id, content, created_at")
+      .eq("conversation_id", convId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data);
+  }, []);
+
+  const markMessagesRead = useCallback(async (convId: string) => {
+    if (!myId) return;
+    await createClient()
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", convId)
+      .neq("sender_id", myId)
+      .is("read_at", null);
+  }, [myId]);
+
+  // Poll for new messages every 3 seconds when a conversation is open
+  useEffect(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (!activeConvId) return;
+
+    loadMessages(activeConvId);
+    markMessagesRead(activeConvId);
+    pollRef.current = setInterval(() => {
+      loadMessages(activeConvId);
+      loadConversations();
+      markMessagesRead(activeConvId);
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
     };
-    setMessages((prev) => ({
-      ...prev,
-      [activeConv]: [...(prev[activeConv] || []), newMsg],
-    }));
+  }, [activeConvId, loadMessages, loadConversations]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || !activeConvId || !myId || sending) return;
+    setSending(true);
+    const content = input.trim();
     setInput("");
+
+    const supabase = createClient();
+
+    await supabase.from("messages").insert({
+      conversation_id: activeConvId,
+      sender_id: myId,
+      content,
+    });
+
+    // Update conversation last_message
+    await supabase
+      .from("conversations")
+      .update({ last_message: content, last_message_at: new Date().toISOString() })
+      .eq("id", activeConvId);
+
+    // Notify the other person
+    const conv = conversations.find((c) => c.id === activeConvId);
+    if (conv?.other_id) {
+      const { data: me } = await supabase.from("profiles").select("full_name").eq("id", myId).single();
+      await supabase.from("notifications").insert({
+        user_id: conv.other_id,
+        type: "message",
+        title: `New message from ${me?.full_name ?? "Someone"}`,
+        body: content.slice(0, 100),
+        data: { link: "/messages" },
+      });
+    }
+
+    await loadMessages(activeConvId);
+    await loadConversations();
+    setSending(false);
   };
 
+  const activeConv = conversations.find((c) => c.id === activeConvId) ?? null;
+
+  const filteredConvs = conversations.filter((c) =>
+    c.other_name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.job_title ?? "").toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] flex flex-col">
       <Navbar />
 
       <div className="flex-1 max-w-6xl w-full mx-auto flex h-[calc(100vh-64px)]">
         {/* Sidebar */}
         <div className={cn(
-          "w-full md:w-80 lg:w-96 flex-shrink-0 bg-white border-r border-[#E5E7EB] flex flex-col",
-          activeConv && "hidden md:flex"
+          "w-full md:w-80 lg:w-96 flex-shrink-0 bg-white dark:bg-[#0D1F3C] border-r border-[#E5E7EB] dark:border-[#1E3A5F] flex flex-col",
+          activeConvId && "hidden md:flex"
         )}>
-          {/* Header */}
-          <div className="px-4 py-4 border-b border-[#E5E7EB]">
-            <h2 className="font-black text-[#0A1628] text-lg mb-3">Messages</h2>
+          <div className="px-4 py-4 border-b border-[#E5E7EB] dark:border-[#1E3A5F]">
+            <h2 className="font-black text-[#0A1628] dark:text-white text-lg mb-3">Messages</h2>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
@@ -119,112 +232,119 @@ export default function MessagesPage() {
                 placeholder="Search conversations..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm bg-[#F3F4F6] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#1E6FFF]"
+                className="w-full pl-9 pr-4 py-2 text-sm bg-[#F3F4F6] dark:bg-[#1E3A5F] text-[#0D0D0D] dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-[#1E6FFF] placeholder:text-[#9CA3AF]"
               />
             </div>
           </div>
 
-          {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {filteredConvs.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => setActiveConv(conv.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-4 border-b border-[#F3F4F6] hover:bg-[#F8FAFC] transition-colors text-left",
-                  activeConv === conv.id && "bg-[#EFF6FF] border-l-2 border-l-[#1E6FFF]"
-                )}
-              >
-                <div className="relative flex-shrink-0">
-                  <Avatar name={conv.name} size="md" />
-                  {conv.unread > 0 && (
-                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#1E6FFF] rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-black">{conv.unread}</span>
-                    </div>
+            {loadingConvs ? (
+              <div className="px-4 py-8 text-center text-sm text-[#9CA3AF]">Loading…</div>
+            ) : filteredConvs.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <MessageSquare size={32} className="text-[#CBD5E1] dark:text-[#334155] mx-auto mb-3" />
+                <p className="text-sm font-semibold text-[#374151] dark:text-[#CBD5E1]">No conversations yet</p>
+                <p className="text-xs text-[#9CA3AF] mt-1">
+                  Message a contractor from their profile, or customers will message you after you bid.
+                </p>
+              </div>
+            ) : (
+              filteredConvs.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setActiveConvId(conv.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-4 border-b border-[#F3F4F6] dark:border-[#1E3A5F] hover:bg-[#F8FAFC] dark:hover:bg-[#1E3A5F] transition-colors text-left",
+                    activeConvId === conv.id && "bg-[#EFF6FF] dark:bg-[#1E3A5F] border-l-2 border-l-[#1E6FFF]"
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className={cn("text-sm truncate", conv.unread > 0 ? "font-bold text-[#0D0D0D]" : "font-semibold text-[#374151]")}>
-                      {conv.name}
-                    </p>
-                    <span className="text-xs text-[#9CA3AF] flex-shrink-0 ml-2">
-                      {formatRelativeTime(conv.time)}
-                    </span>
+                >
+                  <Avatar name={conv.other_name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-sm font-bold text-[#0D0D0D] dark:text-white truncate">
+                        {conv.other_name}
+                      </p>
+                      {conv.last_message_at && (
+                        <span className="text-xs text-[#9CA3AF] flex-shrink-0 ml-2">
+                          {formatRelativeTime(conv.last_message_at)}
+                        </span>
+                      )}
+                    </div>
+                    {conv.last_message ? (
+                      <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] truncate">{conv.last_message}</p>
+                    ) : (
+                      <p className="text-xs text-[#9CA3AF] dark:text-[#64748B] truncate italic">No messages yet</p>
+                    )}
+                    {conv.job_title && (
+                      <p className="text-xs text-[#1E6FFF] truncate mt-0.5">📋 {conv.job_title}</p>
+                    )}
                   </div>
-                  <p className="text-xs text-[#6B7280] truncate">{conv.preview}</p>
-                  <p className="text-xs text-[#1E6FFF] truncate mt-0.5">📋 {conv.jobContext}</p>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))
+            )}
           </div>
         </div>
 
         {/* Chat panel */}
-        {activeConv && activeConvData ? (
-          <div className="flex-1 flex flex-col bg-white">
+        {activeConvId && activeConv ? (
+          <div className="flex-1 flex flex-col bg-white dark:bg-[#0A1628]">
             {/* Chat header */}
-            <div className="px-4 py-3.5 border-b border-[#E5E7EB] flex items-center gap-3">
+            <div className="px-4 py-3.5 border-b border-[#E5E7EB] dark:border-[#1E3A5F] flex items-center gap-3 bg-white dark:bg-[#0D1F3C]">
               <button
-                onClick={() => setActiveConv(null)}
-                className="md:hidden p-1 text-[#6B7280]"
+                onClick={() => setActiveConvId(null)}
+                className="md:hidden p-1 text-[#6B7280] dark:text-[#94A3B8]"
               >
                 <ArrowLeft size={20} />
               </button>
-              <Avatar name={activeConvData.name} size="md" />
+              <Avatar name={activeConv.other_name} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-[#0D0D0D] text-sm">{activeConvData.name}</p>
-                <p className="text-xs text-[#1E6FFF] truncate">
-                  Re: {activeConvData.jobContext}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 text-[#6B7280] hover:text-[#0D0D0D]">
-                  <Phone size={18} />
-                </button>
-                <button className="p-2 text-[#6B7280] hover:text-[#0D0D0D]">
-                  <MoreVertical size={18} />
-                </button>
+                <p className="font-bold text-[#0D0D0D] dark:text-white text-sm">{activeConv.other_name}</p>
+                {activeConv.job_title && (
+                  <p className="text-xs text-[#1E6FFF] truncate">Re: {activeConv.job_title}</p>
+                )}
               </div>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-3">
-              {activeMessages.map((msg) => {
-                const isMe = msg.senderId === "me";
-                return (
-                  <div
-                    key={msg.id}
-                    className={cn("flex", isMe ? "justify-end" : "justify-start")}
-                  >
-                    <div
-                      className={cn(
-                        "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-                        isMe
-                          ? "bg-[#1E6FFF] text-white rounded-br-sm"
-                          : "bg-[#F3F4F6] text-[#0D0D0D] rounded-bl-sm"
-                      )}
-                    >
-                      <p>{msg.content}</p>
-                      <p
+              {messages.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <MessageSquare size={32} className="text-[#CBD5E1] dark:text-[#334155] mx-auto mb-3" />
+                    <p className="text-sm text-[#6B7280] dark:text-[#94A3B8]">
+                      Send the first message to get the conversation started.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isMe = msg.sender_id === myId;
+                  return (
+                    <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
+                      <div
                         className={cn(
-                          "text-xs mt-1",
-                          isMe ? "text-blue-200" : "text-[#9CA3AF]"
+                          "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                          isMe
+                            ? "bg-[#1E6FFF] text-white rounded-br-sm"
+                            : "bg-[#F3F4F6] dark:bg-[#1E3A5F] text-[#0D0D0D] dark:text-white rounded-bl-sm"
                         )}
                       >
-                        {formatRelativeTime(msg.time)}
-                      </p>
+                        <p>{msg.content}</p>
+                        <p className={cn("text-xs mt-1", isMe ? "text-blue-200" : "text-[#9CA3AF]")}>
+                          {formatRelativeTime(msg.created_at)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
               <div ref={bottomRef} />
             </div>
 
             {/* Input */}
-            <div className="px-4 py-4 border-t border-[#E5E7EB]">
+            <div className="px-4 py-4 border-t border-[#E5E7EB] dark:border-[#1E3A5F] bg-white dark:bg-[#0D1F3C]">
               <div className="flex items-end gap-3">
-                <div className="flex-1 bg-[#F3F4F6] rounded-2xl px-4 py-3">
+                <div className="flex-1 bg-[#F3F4F6] dark:bg-[#1E3A5F] rounded-2xl px-4 py-3">
                   <textarea
                     rows={1}
                     placeholder="Type a message..."
@@ -236,12 +356,12 @@ export default function MessagesPage() {
                         sendMessage();
                       }
                     }}
-                    className="w-full bg-transparent text-sm text-[#0D0D0D] placeholder:text-[#9CA3AF] focus:outline-none resize-none"
+                    className="w-full bg-transparent text-sm text-[#0D0D0D] dark:text-white placeholder:text-[#9CA3AF] focus:outline-none resize-none"
                   />
                 </div>
                 <button
                   onClick={sendMessage}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || sending}
                   className="w-11 h-11 bg-[#1E6FFF] rounded-full flex items-center justify-center disabled:opacity-40 hover:bg-[#1558CC] transition-colors flex-shrink-0"
                 >
                   <Send size={18} className="text-white" />
@@ -250,13 +370,13 @@ export default function MessagesPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 hidden md:flex items-center justify-center bg-[#F8FAFC]">
+          <div className="flex-1 hidden md:flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0A1628]">
             <div className="text-center">
-              <div className="w-16 h-16 bg-[#E5E7EB] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Send size={24} className="text-[#9CA3AF]" />
+              <div className="w-16 h-16 bg-[#E5E7EB] dark:bg-[#1E3A5F] rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare size={24} className="text-[#9CA3AF] dark:text-[#64748B]" />
               </div>
-              <p className="font-bold text-[#0D0D0D]">Select a conversation</p>
-              <p className="text-sm text-[#6B7280] mt-1">
+              <p className="font-bold text-[#0D0D0D] dark:text-white">Select a conversation</p>
+              <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-1">
                 Choose from your messages on the left
               </p>
             </div>

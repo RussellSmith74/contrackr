@@ -1,57 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
-import Button from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
-const MOCK_CONTRACTOR_POSTS = [
-  {
-    id: "mock-2",
-    type: "work_showcase" as const,
-    author: { name: "Ridgeline Roofing Co.", avatar: null, role: "contractor" as const },
-    location: "Brandon, MS",
-    category: "Roofing",
-    title: "GAF Timberline roof replacement — before & after",
-    content: "Just wrapped up a full roof replacement on this 2,400 sq ft home. Removed old 3-tab shingles, installed GAF Timberline HDZ in Charcoal. 30-year warranty. Completed in 2 days. Call us for a free inspection and estimate.",
-    photos: [] as string[],
-    timeline: null,
-    budget: null,
-    time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    bids: null,
-    rating: 4.9,
-    reviewCount: 47,
-    status: null,
-  },
-  {
-    id: "mock-4",
-    type: "promotion" as const,
-    author: { name: "Precision Electric", avatar: null, role: "contractor" as const },
-    location: "Jackson, MS",
-    category: "Electrical",
-    title: "Summer Special — Panel Upgrades 15% Off",
-    content: "Now through July 31st, we're offering 15% off all electrical panel upgrades and whole-home rewires. Licensed and insured. Free estimates — call or message us today.",
-    photos: [] as string[],
-    timeline: null,
-    budget: null,
-    time: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    bids: null,
-    rating: 4.7,
-    reviewCount: 31,
-    status: null,
-  },
-];
-
 interface Post {
   id: string;
-  type: "job_request" | "work_showcase" | "promotion";
+  source: "job_post" | "feed_post";
+  type: "job_request" | "work_showcase" | "promotion" | "update";
+  author_id: string;
   author: { name: string; avatar: string | null; role: "customer" | "contractor" };
   location: string;
   category: string;
@@ -62,8 +26,8 @@ interface Post {
   budget: string | null;
   time: string;
   bids: number | null;
-  rating?: number;
-  reviewCount?: number;
+  likes_count: number;
+  comments_count: number;
   status: "open" | null;
 }
 
@@ -78,39 +42,47 @@ export default function FeedPage() {
   const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<"customer" | "contractor" | null>(null);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+  const fetchPosts = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-      if (user) {
-        setCurrentUserId(user.id);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url, role")
-          .eq("id", user.id)
-          .single();
-        if (profile) {
-          setCurrentUserName(profile.full_name);
-          setCurrentUserAvatar(profile.avatar_url);
-          setCurrentUserRole(profile.role as "customer" | "contractor");
-        }
+    if (user) {
+      setCurrentUserId(user.id);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url, role")
+        .eq("id", user.id)
+        .single();
+      if (profile) {
+        setCurrentUserName(profile.full_name);
+        setCurrentUserAvatar(profile.avatar_url);
+        setCurrentUserRole(profile.role as "customer" | "contractor");
       }
+    }
 
-      const { data: jobPosts } = await supabase
-        .from("job_posts")
-        .select("id, title, description, category, location, timeline, budget_range, photos, bid_count, created_at, status, profiles(full_name, avatar_url)")
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
+    // Job posts
+    const { data: jobPosts } = await supabase
+      .from("job_posts")
+      .select("id, title, description, category, location, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url)")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(30);
 
-      const realPosts: Post[] = (jobPosts || []).map((p) => ({
+    // Contractor feed posts
+    const { data: feedPosts } = await supabase
+      .from("feed_posts")
+      .select("id, content, post_type, category, location, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url)")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    const realJobPosts: Post[] = (jobPosts ?? []).map((p) => {
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
+      return {
         id: p.id,
-        type: "job_request" as const,
-        author: {
-          name: (p.profiles as unknown as { full_name: string; avatar_url: string | null } | null)?.full_name ?? "Anonymous",
-          avatar: (p.profiles as unknown as { full_name: string; avatar_url: string | null } | null)?.avatar_url ?? null,
-          role: "customer" as const,
-        },
+        source: "job_post",
+        type: "job_request",
+        author_id: profile?.id ?? "",
+        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer" },
         location: p.location,
         category: p.category,
         title: p.title,
@@ -120,18 +92,44 @@ export default function FeedPage() {
         budget: p.budget_range,
         time: p.created_at,
         bids: p.bid_count ?? 0,
+        likes_count: 0,
+        comments_count: 0,
         status: "open",
-      }));
+      };
+    });
 
-      const all = [...realPosts, ...MOCK_CONTRACTOR_POSTS].sort(
-        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
-      );
-      setPosts(all);
-      setLoading(false);
-    };
+    const realFeedPosts: Post[] = (feedPosts ?? []).map((p) => {
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
+      const postType = p.post_type as "work_showcase" | "promotion" | "update";
+      return {
+        id: p.id,
+        source: "feed_post",
+        type: postType,
+        author_id: profile?.id ?? "",
+        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor" },
+        location: p.location ?? "",
+        category: p.category ?? "",
+        title: p.content.split("\n")[0].slice(0, 80),
+        content: p.content,
+        photos: p.photos ?? [],
+        timeline: null,
+        budget: null,
+        time: p.created_at,
+        bids: null,
+        likes_count: p.likes_count ?? 0,
+        comments_count: p.comments_count ?? 0,
+        status: null,
+      };
+    });
 
-    fetchPosts();
+    const all = [...realJobPosts, ...realFeedPosts].sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    );
+    setPosts(all);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const filtered = posts.filter((post) => {
     if (activeFilter === "Job Requests" && post.type !== "job_request") return false;
@@ -160,7 +158,7 @@ export default function FeedPage() {
                 <div className="flex items-center gap-3">
                   <Avatar src={currentUserAvatar} name={currentUserName || "?"} size="md" />
                   <Link
-                    href={currentUserRole === "customer" ? "/post-job" : "/feed"}
+                    href={currentUserRole === "customer" ? "/post-job" : "/compose"}
                     className="flex-1 px-5 py-3 rounded-2xl border-2 border-[#E2E8F0] dark:border-[#1E3A5F] bg-[#F8FAFC] dark:bg-[#0A1628] text-[15px] text-[#94A3B8] dark:text-[#4B6A8A] hover:border-[#1E6FFF] transition-all cursor-pointer"
                   >
                     {currentUserRole === "contractor"
@@ -237,8 +235,6 @@ export default function FeedPage() {
 
           {/* ── Right sidebar ── */}
           <aside className="hidden lg:flex flex-col gap-4 w-[268px] flex-shrink-0">
-
-            {/* Quick Actions */}
             <div className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-5 shadow-sm dark:shadow-none">
               <h3 className="text-[11px] font-bold text-[#94A3B8] dark:text-[#4B6A8A] uppercase tracking-widest mb-4">Quick Actions</h3>
               <div className="flex flex-col gap-1">
@@ -267,7 +263,6 @@ export default function FeedPage() {
               </div>
             </div>
 
-            {/* Browse by Trade */}
             <div className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-5 shadow-sm dark:shadow-none">
               <h3 className="text-[11px] font-bold text-[#94A3B8] dark:text-[#4B6A8A] uppercase tracking-widest mb-3">Browse by Trade</h3>
               <div className="flex flex-col">
@@ -289,7 +284,6 @@ export default function FeedPage() {
               </div>
             </div>
 
-            {/* Signup CTA */}
             {!currentUserId && (
               <div className="bg-[#1E6FFF] rounded-2xl p-5 text-center">
                 <p className="text-white font-bold text-[15px] mb-1">Join Contrakr</p>
@@ -322,6 +316,22 @@ interface Comment {
   profiles: { full_name: string; avatar_url: string | null } | null;
 }
 
+async function createNotification(
+  userId: string,
+  type: string,
+  title: string,
+  body: string,
+  link: string
+) {
+  await createClient().from("notifications").insert({
+    user_id: userId,
+    type,
+    title,
+    body,
+    data: { link },
+  });
+}
+
 function FeedCard({
   post,
   currentUserId,
@@ -336,30 +346,43 @@ function FeedCard({
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [commentCount, setCommentCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(post.comments_count);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [likeCount] = useState(Math.floor(Math.random() * 14) + 1);
+  const [likeCount, setLikeCount] = useState(post.likes_count);
+  const [likePending, setLikePending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isMock = post.id.startsWith("mock-");
+  const isFeedPost = post.source === "feed_post";
   const isContractor = post.author.role === "contractor";
 
+  // Check if current user already liked this post
+  useEffect(() => {
+    if (!currentUserId || !isFeedPost) return;
+    createClient()
+      .from("likes")
+      .select("id")
+      .eq("post_id", post.id)
+      .eq("user_id", currentUserId)
+      .single()
+      .then(({ data }) => { if (data) setLiked(true); });
+  }, [currentUserId, post.id, isFeedPost]);
+
   const typeConfig = {
-    job_request:   { label: "Looking for help", light: "text-[#1E6FFF] bg-[#EFF6FF]",       dark: "dark:text-[#60A5FA] dark:bg-[#1E3A5F]" },
-    work_showcase: { label: "Work showcase",    light: "text-[#059669] bg-[#ECFDF5]",        dark: "dark:text-[#34D399] dark:bg-[#064E3B]" },
-    promotion:     { label: "Special offer",    light: "text-[#D97706] bg-[#FFFBEB]",        dark: "dark:text-[#FCD34D] dark:bg-[#451A03]" },
+    job_request:   { label: "Looking for help", light: "text-[#1E6FFF] bg-[#EFF6FF]",  dark: "dark:text-[#60A5FA] dark:bg-[#1E3A5F]" },
+    work_showcase: { label: "Work showcase",    light: "text-[#059669] bg-[#ECFDF5]",   dark: "dark:text-[#34D399] dark:bg-[#064E3B]" },
+    promotion:     { label: "Special offer",    light: "text-[#D97706] bg-[#FFFBEB]",   dark: "dark:text-[#FCD34D] dark:bg-[#451A03]" },
+    update:        { label: "Update",           light: "text-[#7C3AED] bg-[#F5F3FF]",   dark: "dark:text-[#A78BFA] dark:bg-[#2E1065]" },
   };
-  const type = typeConfig[post.type];
+  const type = typeConfig[post.type] ?? typeConfig.update;
 
   const loadComments = async () => {
-    if (isMock) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("post_comments")
+    if (!isFeedPost) return;
+    const { data } = await createClient()
+      .from("comments")
       .select("id, content, created_at, profiles(full_name, avatar_url)")
-      .eq("job_post_id", post.id)
+      .eq("post_id", post.id)
       .order("created_at", { ascending: true });
     if (data) {
       setComments(data as unknown as Comment[]);
@@ -375,23 +398,82 @@ function FeedCard({
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || !currentUserId || isMock) return;
+    if (!commentText.trim() || !currentUserId || !isFeedPost) return;
     setSubmitting(true);
     const supabase = createClient();
+
+    // Get commenter name
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", currentUserId)
+      .single();
+
     const { data, error } = await supabase
-      .from("post_comments")
-      .insert({ job_post_id: post.id, author_id: currentUserId, content: commentText.trim() })
+      .from("comments")
+      .insert({ post_id: post.id, author_id: currentUserId, content: commentText.trim() })
       .select("id, content, created_at, profiles(full_name, avatar_url)")
       .single();
+
     if (!error && data) {
       setComments((prev) => [...prev, data as unknown as Comment]);
       setCommentCount((prev) => prev + 1);
       setCommentText("");
+
+      // Update comments_count on the post
+      await supabase
+        .from("feed_posts")
+        .update({ comments_count: commentCount + 1 })
+        .eq("id", post.id);
+
+      // Notify post author if it's not the same person
+      if (post.author_id && post.author_id !== currentUserId) {
+        await createNotification(
+          post.author_id,
+          "comment",
+          `${me?.full_name ?? "Someone"} commented on your post`,
+          commentText.trim().slice(0, 100),
+          `/feed`
+        );
+      }
     }
     setSubmitting(false);
   };
 
-  const categoryLabel = isContractor ? post.category : getCategoryLabel(post.category);
+  const handleLike = async () => {
+    if (!currentUserId || !isFeedPost || likePending) return;
+    setLikePending(true);
+    const supabase = createClient();
+
+    if (liked) {
+      await supabase.from("likes").delete().eq("post_id", post.id).eq("user_id", currentUserId);
+      const newCount = Math.max(0, likeCount - 1);
+      setLiked(false);
+      setLikeCount(newCount);
+      await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
+    } else {
+      await supabase.from("likes").insert({ post_id: post.id, user_id: currentUserId });
+      const newCount = likeCount + 1;
+      setLiked(true);
+      setLikeCount(newCount);
+      await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
+
+      // Notify post author
+      if (post.author_id && post.author_id !== currentUserId) {
+        const { data: me } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).single();
+        await createNotification(
+          post.author_id,
+          "like",
+          `${me?.full_name ?? "Someone"} liked your post`,
+          post.title.slice(0, 80),
+          `/feed`
+        );
+      }
+    }
+    setLikePending(false);
+  };
+
+  const categoryLabel = getCategoryLabel(post.category);
   const categoryIcon  = isContractor ? "" : getCategoryIcon(post.category);
 
   return (
@@ -412,10 +494,14 @@ function FeedCard({
                 <p className="font-bold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-[13px] text-[#64748B] dark:text-[#94A3B8] capitalize font-medium">{post.author.role}</span>
-                  <span className="text-[#CBD5E1] dark:text-[#1E3A5F]">·</span>
-                  <span className="flex items-center gap-1 text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">
-                    <MapPin size={11} />{post.location}
-                  </span>
+                  {post.location && (
+                    <>
+                      <span className="text-[#CBD5E1] dark:text-[#1E3A5F]">·</span>
+                      <span className="flex items-center gap-1 text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">
+                        <MapPin size={11} />{post.location}
+                      </span>
+                    </>
+                  )}
                   <span className="text-[#CBD5E1] dark:text-[#1E3A5F]">·</span>
                   <span className="text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">{formatRelativeTime(post.time)}</span>
                 </div>
@@ -428,12 +514,14 @@ function FeedCard({
         </div>
 
         {/* Category badge */}
-        <div className="mb-3">
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F] px-3 py-1.5 rounded-full">
-            {categoryIcon && <span>{categoryIcon}</span>}
-            {categoryLabel}
-          </span>
-        </div>
+        {post.category && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F] px-3 py-1.5 rounded-full">
+              {categoryIcon && <span>{categoryIcon}</span>}
+              {categoryLabel}
+            </span>
+          </div>
+        )}
 
         {/* Title */}
         <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5">
@@ -491,16 +579,16 @@ function FeedCard({
         )}
       </div>
 
-      {/* Like count row */}
+      {/* Like / comment count row */}
       {(likeCount > 0 || commentCount > 0) && (
         <div className="px-6 py-2 flex items-center justify-between text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
           <span className="flex items-center gap-1.5">
             <span className="w-[18px] h-[18px] bg-[#1E6FFF] rounded-full flex items-center justify-center">
               <ThumbsUp size={10} className="text-white" />
             </span>
-            {likeCount + (liked ? 1 : 0)}
+            {likeCount}
           </span>
-          {commentCount > 0 && (
+          {commentCount > 0 && isFeedPost && (
             <button onClick={handleToggleComments} className="hover:text-[#1E6FFF] dark:hover:text-[#60A5FA] hover:underline transition-colors">
               {commentCount} comment{commentCount !== 1 ? "s" : ""}
             </button>
@@ -511,19 +599,20 @@ function FeedCard({
       {/* Action bar */}
       <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-3 py-1.5 flex items-center gap-1">
         <button
-          onClick={() => setLiked(!liked)}
+          onClick={handleLike}
+          disabled={likePending || !currentUserId}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
             liked
               ? "text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F]"
-              : "text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white"
+              : "text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white disabled:opacity-50"
           )}
         >
           <ThumbsUp size={15} className={cn(liked && "fill-current")} />
-          Like
+          {liked ? "Liked" : "Like"}
         </button>
 
-        {!isMock && (
+        {isFeedPost && (
           <button
             onClick={handleToggleComments}
             className={cn(
@@ -534,7 +623,7 @@ function FeedCard({
             )}
           >
             <MessageSquare size={15} />
-            Comment
+            Comment {commentCount > 0 && `(${commentCount})`}
           </button>
         )}
 
@@ -555,8 +644,8 @@ function FeedCard({
         )}
       </div>
 
-      {/* Comments */}
-      {showComments && !isMock && (
+      {/* Comments section */}
+      {showComments && isFeedPost && (
         <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628]">
           {comments.length > 0 && (
             <div className="flex flex-col gap-3 mb-3">

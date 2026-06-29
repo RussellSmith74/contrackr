@@ -132,6 +132,31 @@ export default function JobDetailPage() {
       setBidSubmitted(true);
       setShowBidForm(false);
       setJob((prev) => prev ? { ...prev, bid_count: prev.bid_count + 1 } : prev);
+
+      // Notify the customer
+      if (job?.customer) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: cp } = await supabase
+          .from("contractor_profiles")
+          .select("business_name, profiles(id)")
+          .eq("id", contractorProfileId)
+          .single();
+        const contractorName = (cp as unknown as { business_name: string } | null)?.business_name ?? "A contractor";
+        const { data: jobCustomer } = await supabase
+          .from("job_posts")
+          .select("customer_id")
+          .eq("id", jobId)
+          .single();
+        if (jobCustomer?.customer_id && user && jobCustomer.customer_id !== user.id) {
+          await supabase.from("notifications").insert({
+            user_id: jobCustomer.customer_id,
+            type: "bid",
+            title: `${contractorName} submitted a bid on your job`,
+            body: `${job.title} — $${parseFloat(bidForm.amount).toLocaleString()}`,
+            data: { link: `/jobs/${jobId}` },
+          });
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to submit bid.");
     } finally {

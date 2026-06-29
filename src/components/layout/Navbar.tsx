@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Menu, X, Bell, MessageSquare, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Menu, X, MessageSquare, Search } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 interface UserProfile {
   id: string;
@@ -18,10 +19,13 @@ interface UserProfile {
 
 export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [contractorProfileId, setContractorProfileId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -36,23 +40,81 @@ export default function Navbar() {
         .eq("id", authUser.id)
         .single();
 
-      if (profile) setUser(profile as UserProfile);
+      if (!profile) return;
+      setUser(profile as UserProfile);
+
+      if (profile.role === "contractor") {
+        const { data: cp } = await supabase
+          .from("contractor_profiles")
+          .select("id")
+          .eq("user_id", authUser.id)
+          .single();
+        if (cp) setContractorProfileId(cp.id);
+      }
     };
 
     loadUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setUser(null); return; }
+      if (!session) { setUser(null); setContractorProfileId(null); return; }
       loadUser();
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Poll for unread messages every 10 seconds
+  useEffect(() => {
+    if (!user) return;
+
+    const checkUnread = async () => {
+      const supabase = createClient();
+
+      // Get conversations where user is a participant
+      let contractorId: string | null = null;
+      if (user.role === "contractor") {
+        const { data: cp } = await supabase
+          .from("contractor_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        contractorId = cp?.id ?? null;
+      }
+
+      const { data: convs } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(
+          contractorId
+            ? `customer_id.eq.${user.id},contractor_id.eq.${contractorId}`
+            : `customer_id.eq.${user.id}`
+        );
+
+      if (!convs || convs.length === 0) { setUnreadMessages(0); return; }
+
+      const convIds = convs.map((c: { id: string }) => c.id);
+
+      // Count messages sent by others that are unread (no read_at)
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .in("conversation_id", convIds)
+        .neq("sender_id", user.id)
+        .is("read_at", null);
+
+      setUnreadMessages(count ?? 0);
+    };
+
+    checkUnread();
+    pollRef.current = setInterval(checkUnread, 10000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [user]);
+
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
+    setContractorProfileId(null);
     setProfileOpen(false);
     router.push("/");
   };
@@ -96,9 +158,7 @@ export default function Navbar() {
                     href={link.href}
                     className={cn(
                       "relative h-full flex items-center text-[15px] font-medium transition-colors pt-0.5",
-                      isActive
-                        ? "text-white"
-                        : "text-[#94A3B8] hover:text-white"
+                      isActive ? "text-white" : "text-[#94A3B8] hover:text-white"
                     )}
                   >
                     {link.label}
@@ -121,19 +181,23 @@ export default function Navbar() {
                 >
                   <Search size={20} />
                 </Link>
+
+                {/* Messages icon with unread badge */}
                 <Link
                   href="/messages"
-                  className="p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                  className="relative p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors"
                 >
                   <MessageSquare size={20} />
-                </Link>
-                <Link
-                  href="/notifications"
-                  className="p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-                >
-                  <Bell size={20} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#1E6FFF] rounded-full flex items-center justify-center text-white text-[10px] font-black leading-none">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
                 </Link>
 
+                <NotificationBell userId={user.id} />
+
+                {/* Profile dropdown */}
                 <div className="relative ml-1">
                   <button
                     onClick={() => setProfileOpen(!profileOpen)}
@@ -147,13 +211,22 @@ export default function Navbar() {
                         <p className="text-sm font-bold text-[#0D0D0D]">{user.full_name}</p>
                         <p className="text-xs text-[#6B7280] capitalize">{user.role}</p>
                       </div>
-                      {user.role === "contractor" && (
+                      {user.role === "contractor" && contractorProfileId && (
                         <Link
-                          href="/profile"
+                          href={`/contractors/${contractorProfileId}`}
                           className="block px-4 py-2.5 text-sm text-[#0D0D0D] hover:bg-[#F3F4F6]"
                           onClick={() => setProfileOpen(false)}
                         >
                           My Profile
+                        </Link>
+                      )}
+                      {user.role === "contractor" && !contractorProfileId && (
+                        <Link
+                          href="/onboarding/contractor"
+                          className="block px-4 py-2.5 text-sm text-[#0D0D0D] hover:bg-[#F3F4F6]"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Set Up Profile
                         </Link>
                       )}
                       <Link
@@ -205,9 +278,7 @@ export default function Navbar() {
               href={link.href}
               className={cn(
                 "block px-5 py-3.5 text-[15px] font-medium border-b border-[#1a2f50]",
-                pathname === link.href
-                  ? "text-[#1E6FFF]"
-                  : "text-[#94A3B8] hover:text-white"
+                pathname === link.href ? "text-[#1E6FFF]" : "text-[#94A3B8] hover:text-white"
               )}
               onClick={() => setMobileOpen(false)}
             >
