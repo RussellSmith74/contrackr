@@ -8,6 +8,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { LocationInput } from "@/components/ui/LocationInput";
 
 const STEPS = [
   { id: 1, label: "Business Info" },
@@ -36,6 +37,7 @@ export default function ContractorOnboarding() {
     serviceAreas: "",
     photos: [] as File[],
   });
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -110,6 +112,8 @@ export default function ContractorOnboarding() {
           website: form.website || null,
           license_number: form.licenseNumber || null,
           is_insured: form.isInsured,
+          lat: locationCoords?.lat ?? null,
+          lng: locationCoords?.lng ?? null,
         })
         .select("id")
         .single();
@@ -424,15 +428,17 @@ export default function ContractorOnboarding() {
                 ))}
               </div>
 
-              <Input
-                name="serviceAreas"
-                label="Service Area"
-                placeholder="e.g. Jackson, Brandon, Ridgeland, MS"
+              <LocationInput
+                label="Primary Location"
+                placeholder="Your city, State"
                 value={form.serviceAreas}
-                onChange={handleChange}
                 required
-                hint="List the cities or counties you serve, separated by commas"
+                onChange={(val, coords) => {
+                  setForm((p) => ({ ...p, serviceAreas: val }));
+                  if (coords) setLocationCoords(coords);
+                }}
               />
+              <p className="text-xs text-[#6B7280] -mt-3">Your main service location — used to match you with nearby jobs</p>
             </div>
 
             <div className="flex gap-3">

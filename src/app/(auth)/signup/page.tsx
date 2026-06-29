@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { LocationInput } from "@/components/ui/LocationInput";
 
 type Role = "customer" | "contractor" | null;
 type Step = "role" | "info";
@@ -31,6 +32,7 @@ function SignupForm() {
     businessName: "",
     phone: "",
   });
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -65,15 +67,13 @@ function SignupForm() {
           role,
           phone: form.phone || null,
           location: form.location || null,
+          lat: locationCoords?.lat ?? null,
+          lng: locationCoords?.lng ?? null,
         });
         if (profileError) throw profileError;
       }
 
-      if (role === "contractor") {
-        router.push("/onboarding/contractor");
-      } else {
-        router.push("/onboarding/customer");
-      }
+      router.push("/feed");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -217,13 +217,15 @@ function SignupForm() {
           hint="Used for job notifications — never shared publicly"
         />
 
-        <Input
-          name="location"
+        <LocationInput
           label="City & State"
           placeholder="City, State"
           value={form.location}
-          onChange={handleChange}
           required
+          onChange={(val, coords) => {
+            setForm((p) => ({ ...p, location: val }));
+            if (coords) setLocationCoords(coords);
+          }}
         />
 
         <div className="flex flex-col gap-1.5">

@@ -11,6 +11,7 @@ import { StarRating } from "@/components/ui/StarRating";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { distanceMiles } from "@/lib/geo";
 
 interface Contractor {
   id: string;
@@ -28,6 +29,8 @@ interface Contractor {
   total_reviews: number;
   total_jobs_completed: number;
   location: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 function SearchContent() {
@@ -40,10 +43,29 @@ function SearchContent() {
   const [category, setCategory] = useState(initialCategory);
   const [minRating, setMinRating] = useState(0);
   const [sortBy, setSortBy] = useState<"rating" | "jobs">("rating");
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+  const [searchRadius, setSearchRadius] = useState<number>(50);
 
   useEffect(() => {
     const fetchContractors = async () => {
       const supabase = createClient();
+
+      // Load current user's location prefs
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("lat, lng, search_radius")
+          .eq("id", user.id)
+          .single();
+        if (prof) {
+          setUserLat((prof as { lat?: number | null }).lat ?? null);
+          setUserLng((prof as { lng?: number | null }).lng ?? null);
+          setSearchRadius((prof as { search_radius?: number | null }).search_radius ?? 50);
+        }
+      }
+
       const { data } = await supabase
         .from("contractor_profiles")
         .select(`
@@ -60,6 +82,8 @@ function SearchContent() {
           avg_rating,
           total_reviews,
           total_jobs_completed,
+          lat,
+          lng,
           profiles:user_id(avatar_url, location)
         `)
         .order("avg_rating", { ascending: false });
@@ -68,10 +92,13 @@ function SearchContent() {
         setContractors(
           data.map((c) => {
             const profile = c.profiles as unknown as { avatar_url: string | null; location: string | null } | null;
+            const cAny = c as { lat?: number | null; lng?: number | null };
             return {
               ...c,
               avatar_url: profile?.avatar_url ?? null,
               location: profile?.location ?? null,
+              lat: cAny.lat ?? null,
+              lng: cAny.lng ?? null,
             };
           })
         );
@@ -94,6 +121,10 @@ function SearchContent() {
           !c.categories.some((cat) => cat.includes(q))
         )
           return false;
+      }
+      // Radius filter — only when both user and contractor have coords
+      if (userLat !== null && userLng !== null && c.lat !== null && c.lng !== null) {
+        if (distanceMiles(userLat, userLng, c.lat, c.lng) > searchRadius) return false;
       }
       return true;
     })

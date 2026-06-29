@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
 import { SERVICE_CATEGORIES, TIMELINE_OPTIONS, BUDGET_RANGES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { LocationInput } from "@/components/ui/LocationInput";
 
 export default function CustomerOnboarding() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function CustomerOnboarding() {
     budget: "",
     photos: [] as File[],
   });
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -63,6 +65,8 @@ export default function CustomerOnboarding() {
         category: job.category,
         description: job.description,
         location: job.location,
+        lat: locationCoords?.lat ?? null,
+        lng: locationCoords?.lng ?? null,
         timeline: job.timeline || null,
         budget_range: job.budget || null,
         photos: photoUrls,
@@ -197,13 +201,15 @@ export default function CustomerOnboarding() {
             hint="The more detail you include, the more accurate your bids will be"
           />
 
-          <Input
-            name="location"
+          <LocationInput
             label="Location"
             placeholder="City, State"
             value={job.location}
-            onChange={handleChange}
             required
+            onChange={(val, coords) => {
+              setJob((p) => ({ ...p, location: val }));
+              if (coords) setLocationCoords(coords);
+            }}
           />
 
           <div className="grid sm:grid-cols-2 gap-4">

@@ -10,6 +10,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/utils";
 import { useDarkMode } from "@/lib/useDarkMode";
+import { LocationInput } from "@/components/ui/LocationInput";
 
 interface Profile {
   id: string;
@@ -39,7 +40,9 @@ export default function SettingsPage() {
     phone: "",
     location: "",
     bio: "",
+    search_radius: 50,
   });
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -49,7 +52,7 @@ export default function SettingsPage() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, location, avatar_url, role, bio")
+        .select("id, full_name, email, phone, location, avatar_url, role, bio, search_radius")
         .eq("id", user.id)
         .single();
 
@@ -60,6 +63,7 @@ export default function SettingsPage() {
           phone: data.phone ?? "",
           location: data.location ?? "",
           bio: data.bio ?? "",
+          search_radius: (data as { search_radius?: number }).search_radius ?? 50,
         });
       }
       setLoading(false);
@@ -117,7 +121,10 @@ export default function SettingsPage() {
           full_name: form.full_name,
           phone: form.phone || null,
           location: form.location || null,
+          lat: locationCoords?.lat ?? null,
+          lng: locationCoords?.lng ?? null,
           bio: form.bio || null,
+          search_radius: form.search_radius,
         })
         .eq("id", profile.id);
       if (updateError) throw updateError;
@@ -126,7 +133,8 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save changes.");
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      setError(msg || "Failed to save changes.");
     } finally {
       setSaving(false);
     }
@@ -240,12 +248,34 @@ export default function SettingsPage() {
               hint="Used for job notifications — never shown publicly"
             />
 
-            <Input
+            <LocationInput
               label="City & State"
               placeholder="Austin, TX"
               value={form.location}
-              onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+              onChange={(val, coords) => {
+                setForm((p) => ({ ...p, location: val }));
+                if (coords) setLocationCoords(coords);
+              }}
             />
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#0D0D0D] dark:text-white">
+                Search Radius — <span className="text-[#1E6FFF]">{form.search_radius} miles</span>
+              </label>
+              <input
+                type="range"
+                min={25}
+                max={200}
+                step={25}
+                value={form.search_radius}
+                onChange={(e) => setForm((p) => ({ ...p, search_radius: Number(e.target.value) }))}
+                className="w-full accent-[#1E6FFF]"
+              />
+              <div className="flex justify-between text-xs text-[#9CA3AF]">
+                <span>25 mi</span><span>50 mi</span><span>100 mi</span><span>150 mi</span><span>200 mi</span>
+              </div>
+              <p className="text-xs text-[#9CA3AF]">Only see jobs and contractors within this distance of your location</p>
+            </div>
 
             <Textarea
               label="Bio"

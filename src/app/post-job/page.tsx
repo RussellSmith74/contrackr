@@ -9,6 +9,7 @@ import { Input, Textarea, Select } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
 import { SERVICE_CATEGORIES, TIMELINE_OPTIONS, BUDGET_RANGES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { LocationInput } from "@/components/ui/LocationInput";
 
 
 export default function PostJobPage() {
@@ -26,6 +27,7 @@ export default function PostJobPage() {
     budget: "",
     photos: [] as File[],
   });
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -62,6 +64,8 @@ export default function PostJobPage() {
         category: form.category,
         description: form.description,
         location: form.location,
+        lat: locationCoords?.lat ?? null,
+        lng: locationCoords?.lng ?? null,
         timeline: form.timeline || null,
         budget_range: form.budget || null,
         photos: photoUrls,
@@ -152,13 +156,15 @@ export default function PostJobPage() {
               hint="More detail = more accurate bids"
             />
 
-            <Input
-              name="location"
+            <LocationInput
               label="Location"
               placeholder="City, State"
               value={form.location}
-              onChange={handleChange}
               required
+              onChange={(val, coords) => {
+                setForm((p) => ({ ...p, location: val }));
+                if (coords) setLocationCoords(coords);
+              }}
             />
 
             <div className="grid sm:grid-cols-2 gap-4">

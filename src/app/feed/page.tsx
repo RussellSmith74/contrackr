@@ -10,6 +10,7 @@ import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { distanceMiles } from "@/lib/geo";
 
 interface Post {
   id: string;
@@ -18,6 +19,8 @@ interface Post {
   author_id: string;
   author: { name: string; avatar: string | null; role: "customer" | "contractor" };
   location: string;
+  lat: number | null;
+  lng: number | null;
   category: string;
   title: string;
   content: string;
@@ -41,42 +44,56 @@ export default function FeedPage() {
   const [currentUserName, setCurrentUserName] = useState("");
   const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<"customer" | "contractor" | null>(null);
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+  const [searchRadius, setSearchRadius] = useState<number>(50);
 
   const fetchPosts = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    let lat: number | null = null;
+    let lng: number | null = null;
+    let radius = 50;
+
     if (user) {
       setCurrentUserId(user.id);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, role")
+        .select("full_name, avatar_url, role, lat, lng, search_radius")
         .eq("id", user.id)
         .single();
       if (profile) {
         setCurrentUserName(profile.full_name);
         setCurrentUserAvatar(profile.avatar_url);
         setCurrentUserRole(profile.role as "customer" | "contractor");
+        lat = (profile as { lat?: number | null }).lat ?? null;
+        lng = (profile as { lng?: number | null }).lng ?? null;
+        radius = (profile as { search_radius?: number | null }).search_radius ?? 50;
+        setUserLat(lat);
+        setUserLng(lng);
+        setSearchRadius(radius);
       }
     }
 
     // Job posts
     const { data: jobPosts } = await supabase
       .from("job_posts")
-      .select("id, title, description, category, location, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url)")
+      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url)")
       .eq("status", "open")
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(100);
 
     // Contractor feed posts
     const { data: feedPosts } = await supabase
       .from("feed_posts")
-      .select("id, content, post_type, category, location, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url)")
+      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url)")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(100);
 
     const realJobPosts: Post[] = (jobPosts ?? []).map((p) => {
       const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
+      const pAny = p as { lat?: number | null; lng?: number | null };
       return {
         id: p.id,
         source: "job_post",
@@ -84,6 +101,8 @@ export default function FeedPage() {
         author_id: profile?.id ?? "",
         author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer" },
         location: p.location,
+        lat: pAny.lat ?? null,
+        lng: pAny.lng ?? null,
         category: p.category,
         title: p.title,
         content: p.description,
@@ -101,6 +120,7 @@ export default function FeedPage() {
     const realFeedPosts: Post[] = (feedPosts ?? []).map((p) => {
       const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
       const postType = p.post_type as "work_showcase" | "promotion" | "update";
+      const pAny = p as { lat?: number | null; lng?: number | null };
       return {
         id: p.id,
         source: "feed_post",
@@ -108,6 +128,8 @@ export default function FeedPage() {
         author_id: profile?.id ?? "",
         author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor" },
         location: p.location ?? "",
+        lat: pAny.lat ?? null,
+        lng: pAny.lng ?? null,
         category: p.category ?? "",
         title: p.content.split("\n")[0].slice(0, 80),
         content: p.content,
@@ -134,6 +156,10 @@ export default function FeedPage() {
   const filtered = posts.filter((post) => {
     if (activeFilter === "Job Requests" && post.type !== "job_request") return false;
     if (activeFilter === "Contractor Posts" && post.type === "job_request") return false;
+    // Radius filter — only apply when user has a geocoded location AND post has coords
+    if (userLat !== null && userLng !== null && post.lat !== null && post.lng !== null) {
+      if (distanceMiles(userLat, userLng, post.lat, post.lng) > searchRadius) return false;
+    }
     return true;
   });
 
