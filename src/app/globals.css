@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Brand color tokens ─── */
+:root {
+  --c-bg:        #F8FAFC;
+  --c-surface:   #FFFFFF;
+  --c-surface2:  #F3F4F6;
+  --c-border:    #E5E7EB;
+  --c-border2:   #F3F4F6;
+  --c-text:      #0D0D0D;
+  --c-text2:     #374151;
+  --c-muted:     #6B7280;
+  --c-subtle:    #9CA3AF;
+  --c-navy:      #0A1628;
+  --c-blue:      #1E6FFF;
+  --c-blue-bg:   #EFF6FF;
+  --c-blue-text: #1E6FFF;
+  --c-green-bg:  #ECFDF5;
+  --c-green:     #059669;
+  --c-yellow-bg: #FFFBEB;
+  --c-yellow:    #D97706;
+}
+
+.dark {
+  --c-bg:        #0F172A;
+  --c-surface:   #1E293B;
+  --c-surface2:  #273548;
+  --c-border:    #334155;
+  --c-border2:   #2D3F55;
+  --c-text:      #F1F5F9;
+  --c-text2:     #CBD5E1;
+  --c-muted:     #94A3B8;
+  --c-subtle:    #64748B;
+  --c-navy:      #1E293B;
+  --c-blue:      #3B82F6;
+  --c-blue-bg:   #1E3A5F;
+  --c-blue-text: #93C5FD;
+  --c-green-bg:  #064E3B;
+  --c-green:     #34D399;
+  --c-yellow-bg: #451A03;
+  --c-yellow:    #FCD34D;
+}
+
+/* ─── Apply tokens to common Tailwind classes via cascade ─── */
+.dark .bg-white                    { background-color: var(--c-surface) !important; }
+.dark .bg-\[\#F8FAFC\]            { background-color: var(--c-bg) !important; }
+.dark .bg-\[\#F3F4F6\]            { background-color: var(--c-surface2) !important; }
+.dark .bg-\[\#FAFAFA\]            { background-color: var(--c-surface2) !important; }
+.dark .bg-\[\#F9FAFB\]            { background-color: var(--c-surface2) !important; }
+.dark .bg-\[\#EFF6FF\]            { background-color: var(--c-blue-bg) !important; }
+.dark .bg-\[\#ECFDF5\]            { background-color: var(--c-green-bg) !important; }
+.dark .bg-\[\#0A1628\]            { background-color: #0F172A !important; }
+.dark .bg-\[\#1E6FFF\]            { background-color: var(--c-blue) !important; }
+
+.dark .text-\[\#0D0D0D\]          { color: var(--c-text) !important; }
+.dark .text-\[\#0A1628\]          { color: var(--c-text) !important; }
+.dark .text-\[\#374151\]          { color: var(--c-text2) !important; }
+.dark .text-\[\#4B5563\]          { color: var(--c-text2) !important; }
+.dark .text-\[\#6B7280\]          { color: var(--c-muted) !important; }
+.dark .text-\[\#9CA3AF\]          { color: var(--c-subtle) !important; }
+.dark .text-\[\#1E6FFF\]          { color: var(--c-blue-text) !important; }
+.dark .text-\[\#059669\]          { color: var(--c-green) !important; }
+
+.dark .border-\[\#E5E7EB\]        { border-color: var(--c-border) !important; }
+.dark .border-\[\#F3F4F6\]        { border-color: var(--c-border2) !important; }
+.dark .border-\[\#D1D5DB\]        { border-color: var(--c-border) !important; }
+
+.dark .hover\:bg-\[\#F3F4F6\]:hover { background-color: var(--c-surface2) !important; }
+.dark .hover\:text-\[\#0D0D0D\]:hover { color: var(--c-text) !important; }
+.dark .hover\:border-\[\#1E6FFF\]:hover { border-color: var(--c-blue) !important; }
+
+.dark nav { background-color: var(--c-surface) !important; border-color: var(--c-border) !important; }
+.dark input, .dark textarea {
+  background-color: var(--c-surface2) !important;
+  border-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+.dark input::placeholder, .dark textarea::placeholder { color: var(--c-subtle) !important; }
+.dark input:disabled { color: var(--c-subtle) !important; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #0A1628;
+  color: #FFFFFF;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+button { cursor: pointer; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--c-bg); }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
+
+*:focus-visible {
+  outline: 2px solid #1E6FFF;
+  outline-offset: 2px;
+}

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\smith\\\\Desktop\\\\Contrackr\"; npm install @supabase/supabase-js @supabase/ssr lucide-react clsx tailwind-merge class-variance-authority zustand date-fns react-hook-form @hookform/resolvers zod react-dropzone 2>&1 | Select-Object -Last 10)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\smith\\\\Desktop\\\\Contrackr\"; npm uninstall tailwindcss @tailwindcss/postcss; npm install tailwindcss@3 postcss autoprefixer 2>&1 | Select-Object -Last 8)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\smith\\\\Desktop\\\\Contrackr\"; npx tailwindcss init -p 2>&1)"
+    ]
+  }
+}
