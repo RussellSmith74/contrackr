@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -253,6 +253,7 @@ export default function FeedPage() {
                       currentUserId={currentUserId}
                       getCategoryLabel={getCategoryLabel}
                       getCategoryIcon={getCategoryIcon}
+                      onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
                     />
                   ))
               }
@@ -363,13 +364,48 @@ function FeedCard({
   currentUserId,
   getCategoryLabel,
   getCategoryIcon,
+  onDelete,
 }: {
   post: Post;
   currentUserId: string | null;
   getCategoryLabel: (id: string) => string;
   getCategoryIcon: (id: string) => string;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [editTitle, setEditTitle] = useState(post.title);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    const supabase = createClient();
+    if (post.source === "feed_post") {
+      await supabase.from("feed_posts").update({ content: editContent }).eq("id", post.id);
+      post.content = editContent;
+      post.title = editContent.split("\n")[0].slice(0, 80);
+    } else {
+      await supabase.from("job_posts").update({ title: editTitle, description: editContent }).eq("id", post.id);
+      post.title = editTitle;
+      post.content = editContent;
+    }
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this post?")) return;
+    setDeleting(true);
+    const supabase = createClient();
+    if (post.source === "feed_post") {
+      await supabase.from("feed_posts").delete().eq("id", post.id);
+    } else {
+      await supabase.from("job_posts").delete().eq("id", post.id);
+    }
+    onDelete(post.id);
+  };
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentCount, setCommentCount] = useState(post.comments_count);
@@ -532,9 +568,30 @@ function FeedCard({
                   <span className="text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">{formatRelativeTime(post.time)}</span>
                 </div>
               </div>
-              <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-full flex-shrink-0 tracking-wide uppercase whitespace-nowrap", type.light, type.dark)}>
-                {type.label}
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wide uppercase whitespace-nowrap", type.light, type.dark)}>
+                  {type.label}
+                </span>
+                {currentUserId === post.author_id && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors"
+                      title="Edit post"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="p-1.5 text-[#CBD5E1] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40"
+                      title="Delete post"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -550,21 +607,59 @@ function FeedCard({
         )}
 
         {/* Title */}
-        <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5">
-          {post.title}
-        </h3>
+        {editing && post.source === "job_post" ? (
+          <input
+            className="w-full text-[18px] font-black text-[#0F172A] dark:text-white bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#1E6FFF] rounded-lg px-3 py-2 mb-2.5 focus:outline-none"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+          />
+        ) : (
+          <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5">
+            {post.title}
+          </h3>
+        )}
 
         {/* Body */}
-        <p className={cn("text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed", !expanded && "line-clamp-3")}>
-          {post.content}
-        </p>
-        {post.content.length > 180 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold mt-1 hover:underline"
-          >
-            {expanded ? "see less" : "...see more"}
-          </button>
+        {editing ? (
+          <textarea
+            className="w-full text-[14px] text-[#475569] dark:text-[#E5E7EB] bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#1E6FFF] rounded-lg px-3 py-2 leading-relaxed focus:outline-none resize-none mb-3"
+            rows={5}
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+          />
+        ) : (
+          <>
+            <p className={cn("text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed", !expanded && "line-clamp-3")}>
+              {post.content}
+            </p>
+            {post.content.length > 180 && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold mt-1 hover:underline"
+              >
+                {expanded ? "see less" : "...see more"}
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Edit save/cancel */}
+        {editing && (
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleSaveEdit}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#1E6FFF] text-white text-sm font-semibold rounded-lg hover:bg-[#1558CC] transition-colors disabled:opacity-50"
+            >
+              <Check size={14} />{saving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setEditContent(post.content); setEditTitle(post.title); }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#F1F5F9] dark:bg-[#1E3A5F] text-[#475569] dark:text-[#94A3B8] text-sm font-semibold rounded-lg hover:bg-[#E2E8F0] transition-colors"
+            >
+              <X size={14} />Cancel
+            </button>
+          </div>
         )}
 
         {/* Meta chips */}
