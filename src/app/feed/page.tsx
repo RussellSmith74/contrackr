@@ -17,7 +17,7 @@ interface Post {
   source: "job_post" | "feed_post";
   type: "job_request" | "work_showcase" | "promotion" | "update";
   author_id: string;
-  author: { name: string; avatar: string | null; role: "customer" | "contractor" };
+  author: { name: string; avatar: string | null; role: "customer" | "contractor"; is_admin: boolean };
   location: string;
   lat: number | null;
   lng: number | null;
@@ -44,6 +44,7 @@ export default function FeedPage() {
   const [currentUserName, setCurrentUserName] = useState("");
   const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<"customer" | "contractor" | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [searchRadius, setSearchRadius] = useState<number>(50);
@@ -60,13 +61,14 @@ export default function FeedPage() {
       setCurrentUserId(user.id);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, role, lat, lng, search_radius")
+        .select("full_name, avatar_url, role, lat, lng, search_radius, is_admin")
         .eq("id", user.id)
         .single();
       if (profile) {
         setCurrentUserName(profile.full_name);
         setCurrentUserAvatar(profile.avatar_url);
         setCurrentUserRole(profile.role as "customer" | "contractor");
+        setIsAdmin((profile as { is_admin?: boolean }).is_admin ?? false);
         lat = (profile as { lat?: number | null }).lat ?? null;
         lng = (profile as { lng?: number | null }).lng ?? null;
         radius = (profile as { search_radius?: number | null }).search_radius ?? 50;
@@ -79,7 +81,7 @@ export default function FeedPage() {
     // Job posts
     const { data: jobPosts } = await supabase
       .from("job_posts")
-      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url)")
+      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin)")
       .eq("status", "open")
       .order("created_at", { ascending: false })
       .limit(100);
@@ -87,19 +89,19 @@ export default function FeedPage() {
     // Contractor feed posts
     const { data: feedPosts } = await supabase
       .from("feed_posts")
-      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url)")
+      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url, is_admin)")
       .order("created_at", { ascending: false })
       .limit(100);
 
     const realJobPosts: Post[] = (jobPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean } | null;
       const pAny = p as { lat?: number | null; lng?: number | null };
       return {
         id: p.id,
         source: "job_post",
         type: "job_request",
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer" },
+        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false },
         location: p.location,
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -118,7 +120,7 @@ export default function FeedPage() {
     });
 
     const realFeedPosts: Post[] = (feedPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean } | null;
       const postType = p.post_type as "work_showcase" | "promotion" | "update";
       const pAny = p as { lat?: number | null; lng?: number | null };
       return {
@@ -126,7 +128,7 @@ export default function FeedPage() {
         source: "feed_post",
         type: postType,
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor" },
+        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false },
         location: p.location ?? "",
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -251,6 +253,7 @@ export default function FeedPage() {
                       key={post.id}
                       post={post}
                       currentUserId={currentUserId}
+                      isAdmin={isAdmin}
                       getCategoryLabel={getCategoryLabel}
                       getCategoryIcon={getCategoryIcon}
                       onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
@@ -362,12 +365,14 @@ async function createNotification(
 function FeedCard({
   post,
   currentUserId,
+  isAdmin,
   getCategoryLabel,
   getCategoryIcon,
   onDelete,
 }: {
   post: Post;
   currentUserId: string | null;
+  isAdmin: boolean;
   getCategoryLabel: (id: string) => string;
   getCategoryIcon: (id: string) => string;
   onDelete: (id: string) => void;
@@ -553,7 +558,14 @@ function FeedCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-bold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
+                  {post.author.is_admin && (
+                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#0A1628] text-[#1E6FFF] border border-[#1E6FFF]/40">
+                      Founder
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-[13px] text-[#64748B] dark:text-[#94A3B8] capitalize font-medium">{post.author.role}</span>
                   {post.location && (
@@ -572,7 +584,7 @@ function FeedCard({
                 <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wide uppercase whitespace-nowrap", type.light, type.dark)}>
                   {type.label}
                 </span>
-                {currentUserId === post.author_id && (
+                {(currentUserId === post.author_id || isAdmin) && (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setEditing(true)}

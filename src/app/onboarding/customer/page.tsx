@@ -8,7 +8,8 @@ import Button from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
-import { SERVICE_CATEGORIES, TIMELINE_OPTIONS, BUDGET_RANGES } from "@/lib/constants";
+import { CategoryCombobox } from "@/components/ui/CategoryCombobox";
+import { TIMELINE_OPTIONS, BUDGET_RANGES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import { LocationInput } from "@/components/ui/LocationInput";
 
@@ -222,14 +223,12 @@ export default function CustomerOnboarding() {
             hint="A clear title gets more views from the right contractors"
           />
 
-          <Select
-            name="category"
+          <CategoryCombobox
             label="Service Type"
             value={job.category}
-            onChange={handleChange}
+            onChange={(val) => setJob((p) => ({ ...p, category: val }))}
             required
-            placeholder="Select a category"
-            options={SERVICE_CATEGORIES.map((c) => ({ value: c.id, label: `${c.icon} ${c.label}` }))}
+            placeholder="Search or type a category..."
           />
 
           <Textarea

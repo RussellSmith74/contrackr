@@ -438,7 +438,7 @@ export default function ContractorOnboarding() {
 
               <div className="flex flex-wrap gap-2">
                 <p className="text-xs text-[#6B7280] w-full mb-1 font-semibold">Common trades — click to add:</p>
-                {["Landscaping","Roofing","Plumbing","HVAC","Electrical","Painting","Concrete","Carpentry","Pressure Washing","Window Cleaning","Gutter Cleaning","Tree Trimming","Flooring","Drywall","Fencing"].map((s) => (
+                {["Landscaping","Roofing","Plumbing","HVAC","Electrical","Painting","Concrete & Flatwork","Carpentry & Woodwork","Pressure Washing","Gutter Cleaning","Tree Trimming","Flooring","Drywall & Plastering","Fencing","Land Clearing","Welding & Fabrication","Hauling & Junk Removal","Mobile Mechanic","Auto Detailing","Handyman Services","Insulation","Masonry & Stonework","Pool & Spa Services","Septic & Drain Field","Solar & Generators","Security Systems & Cameras","Irrigation & Sprinklers","Moving & Labor Help","Towing","Equipment Operator","Trucking & Heavy Hauling","Cleaning Services","Window & Door Install","Kitchen & Bath Remodel","Tile Work","Framing"].map((s) => (
                   !form.categories.includes(s) && (
                     <button
                       key={s}

@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Button from "@/components/ui/Button";
 import { Input, Textarea, Select } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
+import { CategoryCombobox } from "@/components/ui/CategoryCombobox";
 import { SERVICE_CATEGORIES, TIMELINE_OPTIONS, BUDGET_RANGES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import { LocationInput } from "@/components/ui/LocationInput";
@@ -93,7 +94,7 @@ export default function PostJobPage() {
             Your job is posted!
           </h1>
           <p className="text-[#6B7280] mb-8 leading-relaxed">
-            We&apos;ve matched you with the top-rated <strong>{SERVICE_CATEGORIES.find(c => c.id === form.category)?.label}</strong> contractors in your area. Expect to hear from them soon.
+            We&apos;ve matched you with the top-rated <strong>{form.category}</strong> contractors in your area. Expect to hear from them soon.
           </p>
           <div className="flex flex-col gap-3">
             <Button variant="primary" size="lg" fullWidth onClick={() => router.push("/my-jobs")}>
@@ -132,17 +133,12 @@ export default function PostJobPage() {
               hint="Keep it short and specific"
             />
 
-            <Select
-              name="category"
+            <CategoryCombobox
               label="Service Category"
               value={form.category}
-              onChange={handleChange}
+              onChange={(val) => setForm((p) => ({ ...p, category: val }))}
               required
-              placeholder="What type of work do you need?"
-              options={SERVICE_CATEGORIES.map((c) => ({
-                value: c.id,
-                label: `${c.icon} ${c.label}`,
-              }))}
+              placeholder="Search or type a category..."
             />
 
             <Textarea
