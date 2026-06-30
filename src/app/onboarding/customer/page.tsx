@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle, Camera } from "lucide-react";
+import { ArrowRight, CheckCircle, Camera, Loader2 } from "lucide-react";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Input";
@@ -27,6 +28,32 @@ export default function CustomerOnboarding() {
     photos: [] as File[],
   });
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${urlData.publicUrl}?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      setAvatarUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload photo.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -87,9 +114,24 @@ export default function CustomerOnboarding() {
     return (
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#EFF6FF] rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <span className="text-4xl">🏠</span>
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <div className="w-20 h-20 rounded-full bg-[#0A1628] flex items-center justify-center overflow-hidden">
+              {avatarUrl
+                ? <Image src={avatarUrl} alt="Profile" width={80} height={80} className="object-cover w-full h-full" />
+                : <span className="text-4xl">🏠</span>
+              }
+            </div>
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#1E6FFF] rounded-full flex items-center justify-center shadow-md hover:bg-[#1558CC] transition-colors disabled:opacity-60"
+            >
+              {uploadingAvatar ? <Loader2 size={13} className="text-white animate-spin" /> : <Camera size={13} className="text-white" />}
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
           </div>
+          <p className="text-xs text-[#9CA3AF] mb-3">{uploadingAvatar ? "Uploading..." : "Tap to add a profile photo"}</p>
           <h1 className="text-3xl font-black text-[#0A1628] mb-3">
             Welcome to Contrakr!
           </h1>

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, KeyboardEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle, Star, X } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, X, Camera, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
-import { PhotoUpload } from "@/components/ui/PhotoUpload";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { LocationInput } from "@/components/ui/LocationInput";
@@ -13,7 +13,7 @@ import { LocationInput } from "@/components/ui/LocationInput";
 const STEPS = [
   { id: 1, label: "Business Info" },
   { id: 2, label: "Services & Area" },
-  { id: 3, label: "Photos & Bio" },
+  { id: 3, label: "About You" },
   { id: 4, label: "All Set!" },
 ];
 
@@ -35,9 +35,34 @@ export default function ContractorOnboarding() {
     bio: "",
     categories: [] as string[],
     serviceAreas: "",
-    photos: [] as File[],
   });
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${urlData.publicUrl}?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      setAvatarUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload photo.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -78,7 +103,6 @@ export default function ContractorOnboarding() {
     if (form.bio && form.bio.length > 50) score += 20;
     if (form.categories.length > 0) score += 15;
     if (form.serviceAreas) score += 10;
-    if (form.photos.length > 0) score += 20;
     return Math.min(score, 100);
   };
 
@@ -126,32 +150,10 @@ export default function ContractorOnboarding() {
         .update({ phone: form.phone || null })
         .eq("id", user.id);
 
-      // Upload photos
-      if (form.photos.length > 0 && contractorProfile) {
-        for (const file of form.photos) {
-          const ext = file.name.split(".").pop();
-          const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("contractor-photos")
-            .upload(path, file);
-
-          if (uploadError) continue;
-
-          const { data: urlData } = supabase.storage
-            .from("contractor-photos")
-            .getPublicUrl(path);
-
-          await supabase.from("contractor_photos").insert({
-            contractor_id: contractorProfile.id,
-            url: urlData.publicUrl,
-          });
-        }
-      }
-
       setStep(4);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      setError(msg || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -284,6 +286,28 @@ export default function ContractorOnboarding() {
             </div>
 
             <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-5">
+              {/* Profile photo */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-[#0A1628] flex items-center justify-center overflow-hidden">
+                    {avatarUrl
+                      ? <Image src={avatarUrl} alt="Profile" width={80} height={80} className="object-cover w-full h-full" />
+                      : <span className="text-white font-bold text-2xl">{form.ownerName?.[0]?.toUpperCase() || "?"}</span>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#1E6FFF] rounded-full flex items-center justify-center shadow-md hover:bg-[#1558CC] transition-colors disabled:opacity-60"
+                  >
+                    {uploadingAvatar ? <Loader2 size={13} className="text-white animate-spin" /> : <Camera size={13} className="text-white" />}
+                  </button>
+                  <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
+                </div>
+                <p className="text-xs text-[#9CA3AF]">{uploadingAvatar ? "Uploading..." : "Add a profile photo"}</p>
+              </div>
+
               <Input
                 name="businessName"
                 label="Business Name"
@@ -462,39 +486,23 @@ export default function ContractorOnboarding() {
           <div className="flex flex-col gap-6">
             <div>
               <h2 className="text-2xl font-black text-[#0A1628]">
-                Show your work
+                About your business
               </h2>
               <p className="text-[#6B7280] mt-1 text-sm">
-                Contractors with photos get <strong>3× more leads</strong>.
-                Upload your best before/after shots, team photos, or equipment.
+                Tell customers what makes you the right person for the job.
               </p>
             </div>
 
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-6">
-              <PhotoUpload
-                value={form.photos}
-                onChange={(files) => setForm((prev) => ({ ...prev, photos: files }))}
-                maxFiles={12}
-                label="Work Photos"
-                hint="Before & after shots, completed projects, your team, your equipment — all of it helps"
-              />
-
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
               <Textarea
                 name="bio"
                 label="About Your Business"
                 placeholder="Tell customers about your experience, what makes you different, and why they should hire you. Mention your specialty, how long you've been in business, and the area you serve..."
                 value={form.bio}
                 onChange={handleChange}
-                rows={5}
+                rows={6}
                 hint="A strong bio can be the difference between getting the job or not"
               />
-            </div>
-
-            <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-xl px-4 py-3 flex items-start gap-3">
-              <Star size={18} className="text-[#F59E0B] flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-[#92400E]">
-                <strong>Pro tip:</strong> Contractors who add at least 3 photos in their first session are 4× more likely to get their first inquiry within 48 hours.
-              </p>
             </div>
 
             {error && (
@@ -518,12 +526,6 @@ export default function ContractorOnboarding() {
               </Button>
             </div>
 
-            <button
-              onClick={handleFinish}
-              className="text-sm text-[#9CA3AF] text-center hover:text-[#6B7280] transition-colors"
-            >
-              Skip for now — I&apos;ll add photos later
-            </button>
           </div>
         )}
       </div>
