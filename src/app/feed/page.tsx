@@ -411,7 +411,6 @@ function FeedCard({
     }
     onDelete(post.id);
   };
-  const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentCount, setCommentCount] = useState(post.comments_count);
   const [commentText, setCommentText] = useState("");
@@ -424,9 +423,12 @@ function FeedCard({
   const isFeedPost = post.source === "feed_post";
   const isContractor = post.author.role === "contractor";
 
+  // Load comments on mount
+  useEffect(() => { loadComments(); }, [post.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Check if current user already liked this post
   useEffect(() => {
-    if (!currentUserId || !isFeedPost) return;
+    if (!currentUserId) return;
     createClient()
       .from("likes")
       .select("id")
@@ -434,7 +436,7 @@ function FeedCard({
       .eq("user_id", currentUserId)
       .single()
       .then(({ data }) => { if (data) setLiked(true); });
-  }, [currentUserId, post.id, isFeedPost]);
+  }, [currentUserId, post.id]);
 
   const typeConfig = {
     job_request:   { label: "Looking for help", light: "text-[#1E6FFF] bg-[#EFF6FF]",  dark: "dark:text-[#60A5FA] dark:bg-[#1E3A5F]" },
@@ -445,7 +447,6 @@ function FeedCard({
   const type = typeConfig[post.type] ?? typeConfig.update;
 
   const loadComments = async () => {
-    if (!isFeedPost) return;
     const { data } = await createClient()
       .from("comments")
       .select("id, content, created_at, profiles(full_name, avatar_url)")
@@ -457,15 +458,9 @@ function FeedCard({
     }
   };
 
-  const handleToggleComments = () => {
-    if (!showComments && comments.length === 0) loadComments();
-    setShowComments((prev) => !prev);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || !currentUserId || !isFeedPost) return;
+    if (!commentText.trim() || !currentUserId) return;
     setSubmitting(true);
     const supabase = createClient();
 
@@ -487,11 +482,13 @@ function FeedCard({
       setCommentCount((prev) => prev + 1);
       setCommentText("");
 
-      // Update comments_count on the post
-      await supabase
-        .from("feed_posts")
-        .update({ comments_count: commentCount + 1 })
-        .eq("id", post.id);
+      // Update comments_count on the post (feed posts only)
+      if (isFeedPost) {
+        await supabase
+          .from("feed_posts")
+          .update({ comments_count: commentCount + 1 })
+          .eq("id", post.id);
+      }
 
       // Notify post author if it's not the same person
       if (post.author_id && post.author_id !== currentUserId) {
@@ -508,7 +505,7 @@ function FeedCard({
   };
 
   const handleLike = async () => {
-    if (!currentUserId || !isFeedPost || likePending) return;
+    if (!currentUserId || likePending) return;
     setLikePending(true);
     const supabase = createClient();
 
@@ -517,13 +514,13 @@ function FeedCard({
       const newCount = Math.max(0, likeCount - 1);
       setLiked(false);
       setLikeCount(newCount);
-      await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
+      if (isFeedPost) await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
     } else {
       await supabase.from("likes").insert({ post_id: post.id, user_id: currentUserId });
       const newCount = likeCount + 1;
       setLiked(true);
       setLikeCount(newCount);
-      await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
+      if (isFeedPost) await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
 
       // Notify post author
       if (post.author_id && post.author_id !== currentUserId) {
@@ -626,9 +623,11 @@ function FeedCard({
             onChange={(e) => setEditTitle(e.target.value)}
           />
         ) : (
-          <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5">
-            {post.title}
-          </h3>
+          <Link href={`/post/${post.id}?s=${post.source}`}>
+            <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5 hover:text-[#1E6FFF] dark:hover:text-[#60A5FA] transition-colors cursor-pointer">
+              {post.title}
+            </h3>
+          </Link>
         )}
 
         {/* Body */}
@@ -640,19 +639,16 @@ function FeedCard({
             onChange={(e) => setEditContent(e.target.value)}
           />
         ) : (
-          <>
-            <p className={cn("text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed", !expanded && "line-clamp-3")}>
+          <Link href={`/post/${post.id}?s=${post.source}`} className="block">
+            <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed line-clamp-3 cursor-pointer">
               {post.content}
             </p>
             {post.content.length > 180 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold mt-1 hover:underline"
-              >
-                {expanded ? "see less" : "...see more"}
-              </button>
+              <span className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold mt-1 hover:underline">
+                ...see more
+              </span>
             )}
-          </>
+          </Link>
         )}
 
         {/* Edit save/cancel */}
@@ -712,19 +708,19 @@ function FeedCard({
         )}
       </div>
 
-      {/* Like / comment count row */}
+      {/* Like / comment counts always visible */}
       {(likeCount > 0 || commentCount > 0) && (
-        <div className="px-6 py-2 flex items-center justify-between text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
-          <span className="flex items-center gap-1.5">
-            <span className="w-[18px] h-[18px] bg-[#1E6FFF] rounded-full flex items-center justify-center">
-              <ThumbsUp size={10} className="text-white" />
+        <div className="px-6 py-2 flex items-center gap-3 text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
+          {likeCount > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-[18px] h-[18px] bg-[#1E6FFF] rounded-full flex items-center justify-center">
+                <ThumbsUp size={10} className="text-white" />
+              </span>
+              {likeCount}
             </span>
-            {likeCount}
-          </span>
-          {commentCount > 0 && isFeedPost && (
-            <button onClick={handleToggleComments} className="hover:text-[#1E6FFF] dark:hover:text-[#60A5FA] hover:underline transition-colors">
-              {commentCount} comment{commentCount !== 1 ? "s" : ""}
-            </button>
+          )}
+          {commentCount > 0 && (
+            <span>{commentCount} comment{commentCount !== 1 ? "s" : ""}</span>
           )}
         </div>
       )}
@@ -745,30 +741,17 @@ function FeedCard({
           {liked ? "Liked" : "Like"}
         </button>
 
-        {isFeedPost && (
-          <button
-            onClick={handleToggleComments}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
-              showComments
-                ? "text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F]"
-                : "text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white"
-            )}
-          >
-            <MessageSquare size={15} />
-            Comment {commentCount > 0 && `(${commentCount})`}
-          </button>
-        )}
-
-        {post.type === "job_request" ? (
+        {post.type === "job_request" && (
           <Link href={currentUserId ? `/jobs/${post.id}` : "/signup"} className="flex-1">
             <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-[#1E6FFF] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] dark:hover:text-white transition-all">
               <Briefcase size={15} />
               Bid Now
             </button>
           </Link>
-        ) : (
-          <Link href={currentUserId ? "/messages" : "/signup"} className="flex-1">
+        )}
+
+        {currentUserId !== post.author_id && (
+          <Link href={currentUserId ? `/messages?with=${post.author_id}` : "/signup"} className="flex-1">
             <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white transition-all">
               <MessageSquare size={15} />
               Message
@@ -777,51 +760,49 @@ function FeedCard({
         )}
       </div>
 
-      {/* Comments section */}
-      {showComments && isFeedPost && (
-        <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628]">
-          {comments.length > 0 && (
-            <div className="flex flex-col gap-3 mb-3">
-              {comments.map((c) => (
-                <div key={c.id} className="flex items-start gap-2.5">
-                  <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl px-4 py-3">
-                      <p className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-0.5">{c.profiles?.full_name ?? "Anonymous"}</p>
-                      <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-snug">{c.content}</p>
-                    </div>
-                    <p className="text-[11px] text-[#94A3B8] dark:text-[#4B6A8A] mt-1 ml-3">{formatRelativeTime(c.created_at)}</p>
+      {/* Comments — always visible */}
+      <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-6 pt-4 pb-3 bg-[#F8FAFC] dark:bg-[#0A1628]">
+        {comments.length > 0 && (
+          <div className="flex flex-col gap-3 mb-3">
+            {comments.map((c) => (
+              <div key={c.id} className="flex items-start gap-2.5">
+                <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl px-4 py-2.5">
+                    <p className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-0.5">{c.profiles?.full_name ?? "Anonymous"}</p>
+                    <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-snug">{c.content}</p>
                   </div>
+                  <p className="text-[11px] text-[#94A3B8] dark:text-[#4B6A8A] mt-1 ml-3">{formatRelativeTime(c.created_at)}</p>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+        )}
 
-          {currentUserId ? (
-            <form onSubmit={handleSubmitComment} className="flex items-center gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Write a comment..."
-                className="flex-1 text-[14px] px-4 py-2.5 rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] bg-white dark:bg-[#0D1F3C] text-[#0F172A] dark:text-white placeholder:text-[#94A3B8] dark:placeholder:text-[#4B6A8A] focus:outline-none focus:border-[#1E6FFF] focus:ring-2 focus:ring-[#1E6FFF]/20 transition-all"
-              />
-              <button
-                type="submit"
-                disabled={!commentText.trim() || submitting}
-                className="p-2.5 bg-[#1E6FFF] text-white rounded-2xl disabled:opacity-40 hover:bg-[#1a5fe0] transition-colors flex-shrink-0"
-              >
-                <Send size={15} />
-              </button>
-            </form>
-          ) : (
-            <Link href="/login" className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold hover:underline">
-              Sign in to comment
-            </Link>
-          )}
-        </div>
-      )}
+        {currentUserId ? (
+          <form onSubmit={handleSubmitComment} className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 text-[14px] px-4 py-2.5 rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] bg-white dark:bg-[#0D1F3C] text-[#0F172A] dark:text-white placeholder:text-[#94A3B8] dark:placeholder:text-[#4B6A8A] focus:outline-none focus:border-[#1E6FFF] focus:ring-2 focus:ring-[#1E6FFF]/20 transition-all"
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || submitting}
+              className="p-2.5 bg-[#1E6FFF] text-white rounded-2xl disabled:opacity-40 hover:bg-[#1a5fe0] transition-colors flex-shrink-0"
+            >
+              <Send size={15} />
+            </button>
+          </form>
+        ) : (
+          <Link href="/login" className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold hover:underline">
+            Sign in to comment
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
