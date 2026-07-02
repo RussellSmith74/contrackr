@@ -17,7 +17,7 @@ interface Post {
   source: "job_post" | "feed_post";
   type: "job_request" | "work_showcase" | "promotion" | "update";
   author_id: string;
-  author: { name: string; avatar: string | null; role: "customer" | "contractor"; is_admin: boolean };
+  author: { name: string; avatar: string | null; role: "customer" | "contractor"; is_admin: boolean; is_day_one: boolean; is_verified: boolean };
   location: string;
   lat: number | null;
   lng: number | null;
@@ -81,7 +81,7 @@ export default function FeedPage() {
     // Job posts
     const { data: jobPosts } = await supabase
       .from("job_posts")
-      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin)")
+      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin, contractor_profiles(is_day_one, is_verified))")
       .eq("status", "open")
       .order("created_at", { ascending: false })
       .limit(100);
@@ -89,19 +89,20 @@ export default function FeedPage() {
     // Contractor feed posts
     const { data: feedPosts } = await supabase
       .from("feed_posts")
-      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url, is_admin)")
+      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url, is_admin, contractor_profiles(is_day_one, is_verified))")
       .order("created_at", { ascending: false })
       .limit(100);
 
     const realJobPosts: Post[] = (jobPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+      const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
       const pAny = p as { lat?: number | null; lng?: number | null };
       return {
         id: p.id,
         source: "job_post",
         type: "job_request",
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false },
+        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
         location: p.location,
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -120,7 +121,8 @@ export default function FeedPage() {
     });
 
     const realFeedPosts: Post[] = (feedPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+      const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
       const postType = p.post_type as "work_showcase" | "promotion" | "update";
       const pAny = p as { lat?: number | null; lng?: number | null };
       return {
@@ -128,7 +130,7 @@ export default function FeedPage() {
         source: "feed_post",
         type: postType,
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false },
+        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
         location: p.location ?? "",
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -560,6 +562,16 @@ function FeedCard({
                   {post.author.is_admin && (
                     <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#0A1628] text-[#1E6FFF] border border-[#1E6FFF]/40">
                       Founder
+                    </span>
+                  )}
+                  {post.author.is_day_one && (
+                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#FFF7ED] text-[#C2410C] border border-[#FDBA74]">
+                      Day One Contractor
+                    </span>
+                  )}
+                  {post.author.is_verified && (
+                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-[#6EE7B7]">
+                      Verified
                     </span>
                   )}
                 </div>
