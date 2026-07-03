@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -280,84 +280,75 @@ export default function PostPage() {
         </button>
 
         {/* Post card */}
-        <div className="bg-white dark:bg-[#0D1F3C] rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm overflow-hidden mb-4">
-          <div className="p-6">
+        <div className="bg-white dark:bg-[#0D1F3C] rounded-xl border border-[#E2E8F0] dark:border-[#1E3A5F] overflow-hidden mb-4">
+          <div className="p-5">
             {/* Header */}
-            <div className="flex items-start gap-3.5 mb-4">
+            <div className="flex items-start gap-3 mb-3.5">
               <Avatar src={post.author.avatar} name={post.author.name} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-[#0F172A] dark:text-white text-[15px]">{post.author.name}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-semibold text-[#0F172A] dark:text-white text-[15px]">{post.author.name}</p>
                       {post.author.is_admin && (
-                        <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#0A1628] text-[#1E6FFF] border border-[#1E6FFF]/40">
-                          Founder
-                        </span>
-                      )}
-                      {post.author.is_day_one && (
-                        <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#FFF7ED] text-[#C2410C] border border-[#FDBA74]">
-                          Day One Contractor
-                        </span>
+                        <ShieldCheck size={15} className="text-[#1E6FFF] flex-shrink-0" aria-label="Founder" />
                       )}
                       {post.author.is_verified && (
-                        <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-[#6EE7B7]">
-                          Verified
-                        </span>
+                        <BadgeCheck size={15} className="text-[#059669] flex-shrink-0" aria-label="Verified" />
                       )}
+                      {post.author.is_day_one && (
+                        <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />
+                      )}
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md tracking-wide whitespace-nowrap ml-0.5", type.cls)}>
+                        {type.label}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-[13px] text-[#64748B] dark:text-[#94A3B8] capitalize">{post.author.role}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap text-[12.5px] text-[#94A3B8] dark:text-[#64748B]">
+                      <span className="capitalize">{post.author.role}</span>
                       {post.location && (
                         <>
-                          <span className="text-[#CBD5E1]">·</span>
-                          <span className="flex items-center gap-1 text-[13px] text-[#94A3B8]">
-                            <MapPin size={11} />{post.location}
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <MapPin size={10} />{post.location}
                           </span>
                         </>
                       )}
-                      <span className="text-[#CBD5E1]">·</span>
-                      <span className="text-[13px] text-[#94A3B8]">{formatRelativeTime(post.time)}</span>
+                      <span>·</span>
+                      <span>{formatRelativeTime(post.time)}</span>
+                      {post.category && (
+                        <>
+                          <span>·</span>
+                          <span className="text-[#1E6FFF] dark:text-[#60A5FA] font-medium">
+                            {post.source === "job_post" && <span className="mr-0.5">{getCategoryIcon(post.category)}</span>}
+                            {getCategoryLabel(post.category)}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wide uppercase", type.cls)}>
-                      {type.label}
-                    </span>
-                    {canEdit && !editing && (
-                      <div className="flex gap-1">
-                        <button onClick={() => setEditing(true)} className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors">
-                          <Pencil size={15} />
-                        </button>
-                        <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-[#CBD5E1] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {canEdit && !editing && (
+                    <div className="flex gap-0.5 flex-shrink-0">
+                      <button onClick={() => setEditing(true)} className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-[#CBD5E1] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Category */}
-            {post.category && (
-              <div className="mb-3">
-                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F] px-3 py-1.5 rounded-full">
-                  {post.source === "job_post" && <span>{getCategoryIcon(post.category)}</span>}
-                  {getCategoryLabel(post.category)}
-                </span>
-              </div>
-            )}
-
             {/* Title */}
             {editing && post.source === "job_post" ? (
               <input
-                className="w-full text-[20px] font-black text-[#0F172A] dark:text-white bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#1E6FFF] rounded-lg px-3 py-2 mb-3 focus:outline-none"
+                className="w-full text-[18px] font-bold text-[#0F172A] dark:text-white bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#1E6FFF] rounded-lg px-3 py-2 mb-3 focus:outline-none"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
               />
             ) : (
-              <h1 className="text-[20px] font-black text-[#0F172A] dark:text-white leading-snug mb-3">{post.title}</h1>
+              <h1 className="text-[18px] font-bold text-[#0F172A] dark:text-white leading-snug mb-3">{post.title}</h1>
             )}
 
             {/* Content */}
@@ -404,17 +395,18 @@ export default function PostPage() {
               </div>
             )}
 
-            {/* Photos */}
-            {post.photos.length > 0 && (
-              <div className={cn("grid gap-1.5 rounded-xl overflow-hidden", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                {post.photos.map((url, i) => (
-                  <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#1E3A5F]", post.photos.length === 1 ? "aspect-[16/9]" : "aspect-square")}>
-                    <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
+
+          {/* Photos — full-bleed, edge to edge */}
+          {post.photos.length > 0 && (
+            <div className={cn("grid gap-0.5 bg-[#0A1628]", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+              {post.photos.map((url, i) => (
+                <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#132A4A]", post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square")}>
+                  <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Like count */}
           {likeCount > 0 && (
@@ -471,8 +463,8 @@ export default function PostPage() {
         </div>
 
         {/* Comments */}
-        <div className="bg-white dark:bg-[#0D1F3C] rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm p-6">
-          <h2 className="font-black text-[#0F172A] dark:text-white text-[16px] mb-5">
+        <div className="bg-white dark:bg-[#0D1F3C] rounded-xl border border-[#E2E8F0] dark:border-[#1E3A5F] p-5">
+          <h2 className="font-bold text-[#0F172A] dark:text-white text-[15px] mb-5">
             Comments {comments.length > 0 && <span className="text-[#94A3B8] font-normal text-[14px]">({comments.length})</span>}
           </h2>
 

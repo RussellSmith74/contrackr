@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -544,88 +544,75 @@ function FeedCard({
 
   return (
     <div className={cn(
-      "bg-white dark:bg-[#0D1F3C] rounded-2xl border overflow-hidden transition-all duration-200 shadow-sm dark:shadow-none",
-      "hover:shadow-md hover:border-[#1E6FFF]/50 dark:hover:border-[#1E6FFF] dark:hover:shadow-[0_0_0_1px_rgba(30,111,255,0.3)]",
-      isContractor
-        ? "border-l-[3px] border-l-[#1E6FFF] border-[#E2E8F0] dark:border-[#1E3A5F]"
-        : "border-[#E2E8F0] dark:border-[#1E3A5F]"
+      "bg-white dark:bg-[#0D1F3C] rounded-xl border border-[#E2E8F0] dark:border-[#1E3A5F] overflow-hidden transition-colors duration-150",
+      "hover:border-[#CBD5E1] dark:hover:border-[#2A4A73]"
     )}>
-      <div className="p-6">
+      <div className={cn("p-5", post.photos && post.photos.length > 0 ? "pb-4" : "")}>
         {/* Header */}
-        <div className="flex items-start gap-3.5 mb-4">
+        <div className="flex items-start gap-3 mb-3.5">
           <Avatar src={post.author.avatar} name={post.author.name} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-semibold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
                   {post.author.is_admin && (
-                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#0A1628] text-[#1E6FFF] border border-[#1E6FFF]/40">
-                      Founder
-                    </span>
-                  )}
-                  {post.author.is_day_one && (
-                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#FFF7ED] text-[#C2410C] border border-[#FDBA74]">
-                      Day One Contractor
-                    </span>
+                    <ShieldCheck size={15} className="text-[#1E6FFF] flex-shrink-0" aria-label="Founder" />
                   )}
                   {post.author.is_verified && (
-                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-[#6EE7B7]">
-                      Verified
-                    </span>
+                    <BadgeCheck size={15} className="text-[#059669] flex-shrink-0" aria-label="Verified" />
                   )}
+                  {post.author.is_day_one && (
+                    <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />
+                  )}
+                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md tracking-wide whitespace-nowrap ml-0.5", type.light, type.dark)}>
+                    {type.label}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-[13px] text-[#64748B] dark:text-[#94A3B8] capitalize font-medium">{post.author.role}</span>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap text-[12.5px] text-[#94A3B8] dark:text-[#64748B]">
+                  <span className="capitalize">{post.author.role}</span>
                   {post.location && (
                     <>
-                      <span className="text-[#CBD5E1] dark:text-[#1E3A5F]">·</span>
-                      <span className="flex items-center gap-1 text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">
-                        <MapPin size={11} />{post.location}
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin size={10} />{post.location}
                       </span>
                     </>
                   )}
-                  <span className="text-[#CBD5E1] dark:text-[#1E3A5F]">·</span>
-                  <span className="text-[13px] text-[#94A3B8] dark:text-[#4B6A8A]">{formatRelativeTime(post.time)}</span>
+                  <span>·</span>
+                  <span>{formatRelativeTime(post.time)}</span>
+                  {post.category && (
+                    <>
+                      <span>·</span>
+                      <span className="text-[#1E6FFF] dark:text-[#60A5FA] font-medium">
+                        {categoryIcon && <span className="mr-0.5">{categoryIcon}</span>}{categoryLabel}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wide uppercase whitespace-nowrap", type.light, type.dark)}>
-                  {type.label}
-                </span>
-                {(currentUserId === post.author_id || isAdmin) && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors"
-                      title="Edit post"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="p-1.5 text-[#CBD5E1] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40"
-                      title="Delete post"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {(currentUserId === post.author_id || isAdmin) && (
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors"
+                    title="Edit post"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="p-1.5 text-[#CBD5E1] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40"
+                    title="Delete post"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Category badge */}
-        {post.category && (
-          <div className="mb-3">
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F] px-3 py-1.5 rounded-full">
-              {categoryIcon && <span>{categoryIcon}</span>}
-              {categoryLabel}
-            </span>
-          </div>
-        )}
 
         {/* Title */}
         {editing && post.source === "job_post" ? (
@@ -636,7 +623,7 @@ function FeedCard({
           />
         ) : (
           <Link href={`/post/${post.id}?s=${post.source}`}>
-            <h3 className="text-[18px] font-black text-[#0F172A] dark:text-white leading-snug mb-2.5 hover:text-[#1E6FFF] dark:hover:text-[#60A5FA] transition-colors cursor-pointer">
+            <h3 className="text-[16px] font-bold text-[#0F172A] dark:text-white leading-snug mb-2 hover:text-[#1E6FFF] dark:hover:text-[#60A5FA] transition-colors cursor-pointer">
               {post.title}
             </h3>
           </Link>
@@ -702,13 +689,15 @@ function FeedCard({
             )}
           </div>
         )}
+      </div>
 
-        {/* Photos */}
-        {post.photos && post.photos.length > 0 && (
-          <div className={cn("mt-4 grid gap-1.5 rounded-xl overflow-hidden", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+      {/* Photos — full-bleed, edge to edge */}
+      {post.photos && post.photos.length > 0 && (
+        <Link href={`/post/${post.id}?s=${post.source}`}>
+          <div className={cn("grid gap-0.5 bg-[#0A1628]", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {post.photos.slice(0, 4).map((url, i) => (
-              <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#1E3A5F]", post.photos.length === 1 ? "aspect-[16/9]" : "aspect-square")}>
-                <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="300px" />
+              <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#132A4A]", post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square")}>
+                <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
                 {i === 3 && post.photos.length > 4 && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="text-white font-black text-xl">+{post.photos.length - 4}</span>
@@ -717,12 +706,12 @@ function FeedCard({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </Link>
+      )}
 
       {/* Like / comment counts always visible */}
       {(likeCount > 0 || commentCount > 0) && (
-        <div className="px-6 py-2 flex items-center gap-3 text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
+        <div className="px-5 py-2 flex items-center gap-3 text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
           {likeCount > 0 && (
             <span className="flex items-center gap-1.5">
               <span className="w-[18px] h-[18px] bg-[#1E6FFF] rounded-full flex items-center justify-center">
@@ -773,15 +762,15 @@ function FeedCard({
       </div>
 
       {/* Comments — always visible */}
-      <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-6 pt-4 pb-3 bg-[#F8FAFC] dark:bg-[#0A1628]">
+      <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-5 pt-4 pb-3.5">
         {comments.length > 0 && (
           <div className="flex flex-col gap-3 mb-3">
             {comments.map((c) => (
               <div key={c.id} className="flex items-start gap-2.5">
                 <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <div className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl px-4 py-2.5">
-                    <p className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-0.5">{c.profiles?.full_name ?? "Anonymous"}</p>
+                  <div className="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-2xl px-4 py-2.5">
+                    <p className="text-[13px] font-semibold text-[#0F172A] dark:text-white mb-0.5">{c.profiles?.full_name ?? "Anonymous"}</p>
                     <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-snug">{c.content}</p>
                   </div>
                   <p className="text-[11px] text-[#94A3B8] dark:text-[#4B6A8A] mt-1 ml-3">{formatRelativeTime(c.created_at)}</p>

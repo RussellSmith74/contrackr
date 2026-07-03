@@ -84,16 +84,16 @@ export default function PostJobPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0A1628]">
         <Navbar />
         <div className="max-w-lg mx-auto px-4 py-20 text-center">
-          <div className="w-20 h-20 bg-[#ECFDF5] rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={40} className="text-[#059669]" />
+          <div className="w-20 h-20 bg-[#ECFDF5] dark:bg-[#064E3B] rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle size={40} className="text-[#059669] dark:text-[#34D399]" />
           </div>
-          <h1 className="text-3xl font-black text-[#0A1628] mb-3">
+          <h1 className="text-3xl font-bold text-[#0A1628] dark:text-white mb-3">
             Your job is posted!
           </h1>
-          <p className="text-[#6B7280] mb-8 leading-relaxed">
+          <p className="text-[#6B7280] dark:text-[#94A3B8] mb-8 leading-relaxed">
             We&apos;ve matched you with the top-rated <strong>{form.category}</strong> contractors in your area. Expect to hear from them soon.
           </p>
           <div className="flex flex-col gap-3">
@@ -110,19 +110,19 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0A1628]">
       <Navbar />
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-[#0A1628]">Post a Job</h1>
-          <p className="text-[#6B7280] text-sm mt-1">
+          <h1 className="text-2xl font-bold text-[#0A1628] dark:text-white">Post a Job</h1>
+          <p className="text-[#6B7280] dark:text-[#94A3B8] text-sm mt-1">
             Describe your project and contractors will start responding fast.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-5">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-5 flex flex-col gap-5">
             <Input
               name="title"
               label="Job Title"
@@ -184,15 +184,15 @@ export default function PostJobPage() {
           </div>
 
           {/* Photos */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <Camera size={18} className="text-[#1E6FFF]" />
-              <h3 className="font-bold text-[#0D0D0D]">Add Photos</h3>
-              <span className="text-xs text-white font-bold bg-[#1E6FFF] px-2 py-0.5 rounded-full ml-1">
+              <h3 className="font-semibold text-[#0D0D0D] dark:text-white">Add Photos</h3>
+              <span className="text-xs text-white font-semibold bg-[#1E6FFF] px-2 py-0.5 rounded-full ml-1">
                 Recommended
               </span>
             </div>
-            <p className="text-xs text-[#6B7280] mb-4">
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mb-4">
               Photos help contractors understand exactly what&apos;s needed. Posts with photos receive 2× more bids.
             </p>
             <PhotoUpload
@@ -204,7 +204,7 @@ export default function PostJobPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
@@ -220,7 +220,7 @@ export default function PostJobPage() {
             Post Job — Get Free Bids <ArrowRight size={18} />
           </Button>
 
-          <p className="text-xs text-[#9CA3AF] text-center">
+          <p className="text-xs text-[#9CA3AF] dark:text-[#64748B] text-center">
             Your post will be visible to all contractors in your area. 100% free — no fees.
           </p>
         </form>

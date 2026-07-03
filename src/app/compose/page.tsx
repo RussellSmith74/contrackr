@@ -94,7 +94,7 @@ export default function ComposePage() {
           Back
         </button>
 
-        <h1 className="text-2xl font-black text-[#0A1628] dark:text-white mb-6">Create a Post</h1>
+        <h1 className="text-2xl font-bold text-[#0A1628] dark:text-white mb-6">Create a Post</h1>
 
         {/* Post type selector */}
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -102,21 +102,21 @@ export default function ComposePage() {
             <button
               key={t.id}
               onClick={() => setPostType(t.id)}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${
+              className={`p-4 rounded-xl border text-left transition-colors ${
                 postType === t.id
                   ? "border-[#1E6FFF] bg-[#EFF6FF] dark:bg-[#1E3A5F]"
-                  : "border-[#E5E7EB] dark:border-[#1E3A5F] bg-white dark:bg-[#0D1F3C] hover:border-[#1E6FFF]"
+                  : "border-[#E5E7EB] dark:border-[#1E3A5F] bg-white dark:bg-[#0D1F3C] hover:border-[#1E6FFF]/50"
               }`}
             >
               <span className="text-2xl block mb-1">{t.emoji}</span>
-              <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">{t.label}</p>
+              <p className="text-sm font-semibold text-[#0D0D0D] dark:text-white">{t.label}</p>
               <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-0.5">{t.desc}</p>
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5 flex flex-col gap-4">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-5 flex flex-col gap-4">
             <Textarea
               label="What do you want to share?"
               placeholder={
@@ -149,10 +149,10 @@ export default function ComposePage() {
           </div>
 
           {/* Photos */}
-          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Camera size={18} className="text-[#1E6FFF]" />
-              <h3 className="font-bold text-[#0D0D0D] dark:text-white">Add Photos</h3>
+              <h3 className="font-semibold text-[#0D0D0D] dark:text-white">Add Photos</h3>
               {postType === "work_showcase" && (
                 <span className="text-xs text-[#1E6FFF] font-semibold bg-[#EFF6FF] dark:bg-[#1E3A5F] px-2 py-0.5 rounded-full ml-1">
                   Highly recommended
