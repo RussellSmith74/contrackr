@@ -331,15 +331,17 @@ returns integer as $$
 declare
   score integer := 0;
   rec record;
+  phone_val text;
 begin
   select * into rec from public.contractor_profiles where id = p_id;
+  select phone into phone_val from public.profiles where id = rec.user_id;
+
   if rec.business_name is not null then score := score + 15; end if;
+  if rec.owner_name is not null then score := score + 10; end if;
+  if phone_val is not null then score := score + 15; end if;
   if rec.bio is not null and length(rec.bio) > 50 then score := score + 20; end if;
-  if array_length(rec.categories, 1) > 0 then score := score + 15; end if;
-  if array_length(rec.service_areas, 1) > 0 then score := score + 10; end if;
-  if rec.is_insured then score := score + 10; end if;
-  if (select count(*) from public.contractor_photos where contractor_id = p_id) > 0 then score := score + 20; end if;
-  if rec.phone is not null then score := score + 10; end if;
+  if array_length(rec.categories, 1) > 0 then score := score + 20; end if;
+  if array_length(rec.service_areas, 1) > 0 then score := score + 20; end if;
   return least(score, 100);
 end;
 $$ language plpgsql security definer;

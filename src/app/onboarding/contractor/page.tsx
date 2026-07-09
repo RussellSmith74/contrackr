@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle, Star, X, Camera, Loader2 } from "lucide-react";
@@ -23,6 +23,8 @@ export default function ContractorOnboarding() {
   const [loading, setLoading] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
   const categoryInputRef = useRef<HTMLInputElement>(null);
+  const [existingProfileId, setExistingProfileId] = useState<string | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(true);
 
   const [form, setForm] = useState({
     businessName: "",
@@ -40,6 +42,39 @@ export default function ContractorOnboarding() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadExisting = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoadingExisting(false); return; }
+
+      const [{ data: existing }, { data: baseProfile }] = await Promise.all([
+        supabase.from("contractor_profiles").select("*").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("phone, avatar_url").eq("id", user.id).single(),
+      ]);
+
+      if (existing) {
+        setExistingProfileId(existing.id);
+        setForm({
+          businessName: existing.business_name ?? "",
+          ownerName: existing.owner_name ?? "",
+          phone: baseProfile?.phone ?? "",
+          website: existing.website ?? "",
+          licenseNumber: existing.license_number ?? "",
+          isInsured: existing.is_insured ?? false,
+          yearsExperience: existing.years_experience ? String(existing.years_experience) : "",
+          bio: existing.bio ?? "",
+          categories: existing.categories ?? [],
+          serviceAreas: (existing.service_areas ?? []).join(", "),
+        });
+        if (existing.lat && existing.lng) setLocationCoords({ lat: existing.lat, lng: existing.lng });
+        if (baseProfile?.avatar_url) setAvatarUrl(baseProfile.avatar_url);
+      }
+      setLoadingExisting(false);
+    };
+    loadExisting();
+  }, []);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,10 +134,10 @@ export default function ContractorOnboarding() {
     let score = 0;
     if (form.businessName) score += 15;
     if (form.ownerName) score += 10;
-    if (form.phone) score += 10;
+    if (form.phone) score += 15;
     if (form.bio && form.bio.length > 50) score += 20;
-    if (form.categories.length > 0) score += 15;
-    if (form.serviceAreas) score += 10;
+    if (form.categories.length > 0) score += 20;
+    if (form.serviceAreas) score += 20;
     return Math.min(score, 100);
   };
 
@@ -117,30 +152,30 @@ export default function ContractorOnboarding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
 
-      // Insert contractor profile
+      // Insert or update contractor profile
       const serviceAreasArray = form.serviceAreas
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
 
-      const { data: contractorProfile, error: profileError } = await supabase
-        .from("contractor_profiles")
-        .insert({
-          user_id: user.id,
-          business_name: form.businessName,
-          owner_name: form.ownerName,
-          bio: form.bio || null,
-          categories: form.categories,
-          service_areas: serviceAreasArray,
-          years_experience: form.yearsExperience ? parseInt(form.yearsExperience) : null,
-          website: form.website || null,
-          license_number: form.licenseNumber || null,
-          is_insured: form.isInsured,
-          lat: locationCoords?.lat ?? null,
-          lng: locationCoords?.lng ?? null,
-        })
-        .select("id")
-        .single();
+      const payload = {
+        business_name: form.businessName,
+        owner_name: form.ownerName,
+        bio: form.bio || null,
+        categories: form.categories,
+        service_areas: serviceAreasArray,
+        years_experience: form.yearsExperience ? parseInt(form.yearsExperience) : null,
+        website: form.website || null,
+        license_number: form.licenseNumber || null,
+        is_insured: form.isInsured,
+        lat: locationCoords?.lat ?? null,
+        lng: locationCoords?.lng ?? null,
+        profile_completeness: completeness(),
+      };
+
+      const { error: profileError } = existingProfileId
+        ? await supabase.from("contractor_profiles").update(payload).eq("id", existingProfileId)
+        : await supabase.from("contractor_profiles").insert({ user_id: user.id, ...payload });
 
       if (profileError) throw profileError;
 
@@ -158,6 +193,10 @@ export default function ContractorOnboarding() {
       setLoading(false);
     }
   };
+
+  if (loadingExisting) {
+    return <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628]" />;
+  }
 
   if (step === 4) {
     return (

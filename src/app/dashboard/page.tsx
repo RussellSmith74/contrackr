@@ -191,7 +191,7 @@ export default function DashboardPage() {
               />
             </div>
             <Link
-              href="/profile/edit"
+              href="/onboarding/contractor"
               className="text-xs text-[#1E6FFF] font-semibold hover:underline"
             >
               Complete profile →
@@ -209,7 +209,7 @@ export default function DashboardPage() {
                 Add your bio and more work photos to rank higher in search results and get matched to more jobs.
               </p>
             </div>
-            <Link href="/profile/edit">
+            <Link href="/onboarding/contractor">
               <button className="text-xs text-[#D97706] font-bold hover:underline flex-shrink-0">
                 Fix it →
               </button>
