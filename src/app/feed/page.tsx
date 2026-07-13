@@ -550,12 +550,14 @@ function FeedCard({
       <div className={cn("p-5", post.photos && post.photos.length > 0 ? "pb-4" : "")}>
         {/* Header */}
         <div className="flex items-start gap-3 mb-3.5">
-          <Avatar src={post.author.avatar} name={post.author.name} size="md" />
+          <Link href={`/profile/${post.author_id}`} className="flex-shrink-0">
+            <Avatar src={post.author.avatar} name={post.author.name} size="md" />
+          </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="font-semibold text-[#0F172A] dark:text-white text-[15px] leading-tight">{post.author.name}</p>
+                  <Link href={`/profile/${post.author_id}`} className="font-semibold text-[#0F172A] dark:text-white text-[15px] leading-tight hover:underline">{post.author.name}</Link>
                   {post.author.is_admin && (
                     <ShieldCheck size={15} className="text-[#1E6FFF] flex-shrink-0" aria-label="Founder" />
                   )}
