@@ -9,6 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://contrakr.com"),
   title: "Contrakr — Find & Hire Blue Collar Pros",
   description:
     "Contrakr connects homeowners with trusted local contractors. Post a job, compare bids, and get work done — free for everyone.",
@@ -17,6 +18,15 @@ export const metadata: Metadata = {
     title: "Contrakr — Find & Hire Blue Collar Pros",
     description: "The professional marketplace for the blue collar workforce.",
     type: "website",
+    url: "https://contrakr.com",
+    siteName: "Contrakr",
+    images: [{ url: "/icon.png", width: 180, height: 180, alt: "Contrakr" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Contrakr — Find & Hire Blue Collar Pros",
+    description: "The professional marketplace for the blue collar workforce.",
+    images: ["/icon.png"],
   },
 };
 
