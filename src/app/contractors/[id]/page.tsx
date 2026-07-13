@@ -68,6 +68,9 @@ interface FeedPost {
   content: string;
   created_at: string;
   post_type: string;
+  photos: string[];
+  likes_count: number;
+  comments_count: number;
 }
 
 type Tab = "posts" | "photos" | "reviews" | "jobs";
@@ -145,7 +148,7 @@ export default function ContractorProfilePage() {
           .order("created_at", { ascending: false }),
         supabase
           .from("feed_posts")
-          .select("id, content, created_at, post_type")
+          .select("id, content, created_at, post_type, photos, likes_count, comments_count")
           .eq("author_id", cp.user_id)
           .order("created_at", { ascending: false })
           .limit(10),
@@ -355,16 +358,43 @@ export default function ContractorProfilePage() {
                   </div>
                 ) : (
                   posts.map((post) => (
-                    <div key={post.id} className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Avatar src={avatar} name={c.business_name} size="sm" />
-                        <div>
-                          <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">{c.business_name}</p>
-                          <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{formatDate(post.created_at)}</p>
+                    <Link key={post.id} href={`/post/${post.id}?s=feed_post`}>
+                      <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl overflow-hidden hover:border-[#1E6FFF]/50 transition-colors">
+                        <div className="p-5 pb-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Avatar src={avatar} name={c.business_name} size="sm" />
+                            <div>
+                              <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">{c.business_name}</p>
+                              <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{formatDate(post.created_at)}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">{post.content}</p>
                         </div>
+
+                        {post.photos && post.photos.length > 0 && (
+                          <div className={`grid gap-0.5 bg-[#0A1628] ${post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                            {post.photos.slice(0, 4).map((url, i) => (
+                              <div key={i} className={`relative bg-[#F1F5F9] dark:bg-[#132A4A] ${post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                                {i === 3 && post.photos.length > 4 && (
+                                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                    <span className="text-white font-black text-xl">+{post.photos.length - 4}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {(post.likes_count > 0 || post.comments_count > 0) && (
+                          <div className="px-5 py-2.5 flex items-center gap-3 text-xs text-[#9CA3AF] dark:text-[#64748B] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
+                            {post.likes_count > 0 && <span>{post.likes_count} like{post.likes_count !== 1 ? "s" : ""}</span>}
+                            {post.comments_count > 0 && <span>{post.comments_count} comment{post.comments_count !== 1 ? "s" : ""}</span>}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">{post.content}</p>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>

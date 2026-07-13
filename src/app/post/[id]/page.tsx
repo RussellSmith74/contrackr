@@ -362,7 +362,11 @@ export default function PostPage() {
                 onChange={(e) => setEditContent(e.target.value)}
               />
             ) : (
-              <p className="text-[15px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed whitespace-pre-wrap mb-4">{post.content}</p>
+              <p className="text-[15px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed whitespace-pre-wrap mb-4">
+                {post.source === "feed_post"
+                  ? post.content.split("\n").slice(1).join("\n").trim() || post.content
+                  : post.content}
+              </p>
             )}
 
             {editing && (

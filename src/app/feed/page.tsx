@@ -541,6 +541,9 @@ function FeedCard({
 
   const categoryLabel = getCategoryLabel(post.category);
   const categoryIcon  = isContractor ? "" : getCategoryIcon(post.category);
+  const bodyContent = isFeedPost
+    ? post.content.split("\n").slice(1).join("\n").trim() || post.content
+    : post.content;
 
   return (
     <div className={cn(
@@ -642,9 +645,9 @@ function FeedCard({
         ) : (
           <Link href={`/post/${post.id}?s=${post.source}`} className="block">
             <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed line-clamp-3 cursor-pointer">
-              {post.content}
+              {bodyContent}
             </p>
-            {post.content.length > 180 && (
+            {bodyContent.length > 180 && (
               <span className="text-[13px] text-[#1E6FFF] dark:text-[#60A5FA] font-semibold mt-1 hover:underline">
                 ...see more
               </span>
