@@ -14,6 +14,10 @@ import {
   ChevronLeft,
   Calendar,
   Camera,
+  Crown,
+  ShieldCheck,
+  Share2,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -46,6 +50,8 @@ interface ContractorProfile {
     avatar_url: string | null;
     location: string | null;
     phone: string | null;
+    is_admin: boolean | null;
+    is_founder: boolean | null;
   } | null;
 }
 
@@ -86,6 +92,17 @@ export default function ContractorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [messaging, setMessaging] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   const startConversation = useCallback(async () => {
     if (!contractor) return;
@@ -127,7 +144,7 @@ export default function ContractorProfilePage() {
           categories, service_areas, years_experience, website,
           license_number, is_insured, avg_rating, total_reviews,
           total_jobs_completed, is_verified, created_at,
-          profiles ( avatar_url, location, phone )
+          profiles ( avatar_url, location, phone, is_admin, is_founder )
         `)
         .eq("id", id)
         .single();
@@ -213,16 +230,18 @@ export default function ContractorProfilePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-12">
         {/* Profile Header */}
         <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl overflow-hidden mb-5">
-          <div className="h-28 bg-gradient-to-r from-[#0A1628] to-[#1E3A5F]" />
+          <div className="h-32 bg-gradient-to-br from-[#0A1628] via-[#12294a] to-[#1E3A5F] relative">
+            <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }} />
+          </div>
 
           <div className="px-6 pb-6">
-            <div className="flex items-end justify-between -mt-10 mb-4">
+            <div className="flex items-end justify-between -mt-12 mb-4">
               <div className="relative">
                 <Avatar
                   src={avatar}
                   name={c.business_name}
                   size="xl"
-                  className="border-4 border-white dark:border-[#0D1F3C]"
+                  className="!w-24 !h-24 border-4 border-white dark:border-[#0D1F3C] shadow-md"
                 />
                 {c.is_verified && (
                   <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#1E6FFF] rounded-full flex items-center justify-center border-2 border-white dark:border-[#0D1F3C]">
@@ -230,7 +249,14 @@ export default function ContractorProfilePage() {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2 mt-10">
+              <div className="flex items-center gap-2 mt-12">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center justify-center w-10 h-10 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] transition-colors"
+                  title="Share profile"
+                >
+                  {copied ? <Check size={16} className="text-[#059669]" /> : <Share2 size={16} />}
+                </button>
                 <Button variant="outline" size="md" onClick={startConversation} loading={messaging}>
                   <MessageSquare size={16} />
                   Message
@@ -245,7 +271,13 @@ export default function ContractorProfilePage() {
 
             <div className="mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-black text-[#0A1628] dark:text-white">{c.business_name}</h1>
+                <h1 className="text-2xl font-bold text-[#0A1628] dark:text-white">{c.business_name}</h1>
+                {c.profiles?.is_founder && (
+                  <Crown size={18} className="text-[#D4AF37] fill-[#D4AF37]" aria-label="Founder" />
+                )}
+                {c.profiles?.is_admin && (
+                  <ShieldCheck size={18} className="text-[#1E6FFF]" aria-label="Moderator" />
+                )}
                 {c.is_verified && (
                   <Badge variant="blue" size="sm">
                     <CheckCircle size={11} className="mr-1" />
@@ -259,23 +291,34 @@ export default function ContractorProfilePage() {
                   </Badge>
                 )}
               </div>
-              <p className="text-[#6B7280] dark:text-[#94A3B8] text-sm mt-0.5">{c.owner_name}</p>
+              <p className="text-[#6B7280] dark:text-[#94A3B8] text-[15px] mt-0.5">
+                {c.owner_name}{c.categories.length > 0 ? ` · ${c.categories[0]}` : ""}{location ? ` · ${location}` : ""}
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-              <StarRating
-                rating={c.avg_rating}
-                size="md"
-                showCount
-                count={c.total_reviews}
-              />
-              <span className="text-[#E5E7EB] dark:text-[#334155]">·</span>
-              <div className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8]">
-                <Briefcase size={14} />
-                <span>
-                  <strong className="text-[#0D0D0D] dark:text-white">{c.total_jobs_completed}</strong> jobs completed
-                </span>
+            {/* Stat row */}
+            <div className="flex items-center gap-6 mb-4 pb-4 border-t border-[#F1F5F9] dark:border-[#1E3A5F] pt-4">
+              <div>
+                <div className="flex items-center gap-1">
+                  <p className="text-lg font-bold text-[#0A1628] dark:text-white leading-none">{c.avg_rating}</p>
+                  <Star size={14} className="text-[#F59E0B] fill-[#F59E0B]" />
+                </div>
+                <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-1">{c.total_reviews} reviews</p>
               </div>
+              <div className="w-px h-8 bg-[#F1F5F9] dark:bg-[#1E3A5F]" />
+              <div>
+                <p className="text-lg font-bold text-[#0A1628] dark:text-white leading-none">{c.total_jobs_completed}</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-1">Jobs done</p>
+              </div>
+              {c.years_experience != null && (
+                <>
+                  <div className="w-px h-8 bg-[#F1F5F9] dark:bg-[#1E3A5F]" />
+                  <div>
+                    <p className="text-lg font-bold text-[#0A1628] dark:text-white leading-none">{c.years_experience}</p>
+                    <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-1">Yrs exp.</p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-4 mb-4 text-sm text-[#6B7280] dark:text-[#94A3B8]">

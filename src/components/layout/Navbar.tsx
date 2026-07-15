@@ -229,6 +229,15 @@ export default function Navbar() {
                           Set Up Profile
                         </Link>
                       )}
+                      {user.role === "customer" && (
+                        <Link
+                          href={`/profile/${user.id}`}
+                          className="block px-4 py-2.5 text-sm text-[#0D0D0D] hover:bg-[#F3F4F6]"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          My Profile
+                        </Link>
+                      )}
                       <Link
                         href="/settings"
                         className="block px-4 py-2.5 text-sm text-[#0D0D0D] hover:bg-[#F3F4F6]"

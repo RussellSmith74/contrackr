@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -186,24 +186,47 @@ export default function FeedPage() {
             {currentUserId && (
               <div className="bg-white dark:bg-[#0D1F3C] rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] p-4 mb-5 shadow-sm dark:shadow-none">
                 <div className="flex items-center gap-3">
-                  <Avatar src={currentUserAvatar} name={currentUserName || "?"} size="md" />
+                  <Link href={`/profile/${currentUserId}`} className="flex-shrink-0">
+                    <Avatar src={currentUserAvatar} name={currentUserName || "?"} size="md" />
+                  </Link>
                   <Link
                     href={currentUserRole === "customer" ? "/post-job" : "/compose"}
-                    className="flex-1 px-5 py-3 rounded-2xl border-2 border-[#E2E8F0] dark:border-[#1E3A5F] bg-[#F8FAFC] dark:bg-[#0A1628] text-[15px] text-[#94A3B8] dark:text-[#4B6A8A] hover:border-[#1E6FFF] transition-all cursor-pointer"
+                    className="flex-1 px-5 py-3 rounded-full border border-[#E2E8F0] dark:border-[#1E3A5F] bg-[#F8FAFC] dark:bg-[#0A1628] text-[15px] text-[#94A3B8] dark:text-[#4B6A8A] hover:border-[#1E6FFF] hover:bg-white dark:hover:bg-[#0D1F3C] transition-all cursor-pointer"
                   >
                     {currentUserRole === "contractor"
-                      ? "Share an update or showcase your work..."
+                      ? "Share an update or showcase your work…"
                       : "What do you need help with today?"}
                   </Link>
                 </div>
-                {currentUserRole === "customer" && (
-                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
-                    <Link href="/post-job" className="flex items-center gap-2 text-[13px] font-semibold text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] px-3 py-1.5 rounded-xl transition-colors">
-                      <Plus size={15} />
-                      Post a Job
-                    </Link>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
+                  {currentUserRole === "contractor" ? (
+                    <>
+                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#059669] dark:text-[#34D399] hover:bg-[#ECFDF5] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                        <Camera size={18} />
+                        Photo
+                      </Link>
+                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#D97706] dark:text-[#FCD34D] hover:bg-[#FFFBEB] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                        <Tag size={18} />
+                        Offer
+                      </Link>
+                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#1E6FFF] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                        <Megaphone size={18} />
+                        Update
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/post-job" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#1E6FFF] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                        <Briefcase size={18} />
+                        Post a Job
+                      </Link>
+                      <Link href="/post-job" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#059669] dark:text-[#34D399] hover:bg-[#ECFDF5] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                        <Camera size={18} />
+                        Add Photos
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -420,6 +443,8 @@ function FeedCard({
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes_count);
   const [likePending, setLikePending] = useState(false);
+  const [pop, setPop] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFeedPost = post.source === "feed_post";
@@ -522,6 +547,8 @@ function FeedCard({
       const newCount = likeCount + 1;
       setLiked(true);
       setLikeCount(newCount);
+      setPop(true);
+      setTimeout(() => setPop(false), 280);
       if (isFeedPost) await supabase.from("feed_posts").update({ likes_count: newCount }).eq("id", post.id);
 
       // Notify post author
@@ -573,9 +600,6 @@ function FeedCard({
                   {post.author.is_day_one && (
                     <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />
                   )}
-                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md tracking-wide whitespace-nowrap ml-0.5", type.light, type.dark)}>
-                    {type.label}
-                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap text-[12.5px] text-[#94A3B8] dark:text-[#64748B]">
                   <span className="capitalize">{post.author.role}</span>
@@ -599,7 +623,11 @@ function FeedCard({
                   )}
                 </div>
               </div>
-              {(currentUserId === post.author_id || isAdmin) && (
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className={cn("text-[10px] font-semibold px-2 py-1 rounded-md tracking-wide whitespace-nowrap", type.light, type.dark)}>
+                  {type.label}
+                </span>
+                {(currentUserId === post.author_id || isAdmin) && (
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
                     onClick={() => setEditing(true)}
@@ -617,7 +645,8 @@ function FeedCard({
                     <Trash2 size={14} />
                   </button>
                 </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -719,17 +748,22 @@ function FeedCard({
 
       {/* Like / comment counts always visible */}
       {(likeCount > 0 || commentCount > 0) && (
-        <div className="px-5 py-2 flex items-center gap-3 text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
-          {likeCount > 0 && (
+        <div className="px-5 py-2 flex items-center justify-between text-[12px] text-[#94A3B8] dark:text-[#4B6A8A] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
+          {likeCount > 0 ? (
             <span className="flex items-center gap-1.5">
               <span className="w-[18px] h-[18px] bg-[#1E6FFF] rounded-full flex items-center justify-center">
                 <ThumbsUp size={10} className="text-white" />
               </span>
               {likeCount}
             </span>
-          )}
+          ) : <span />}
           {commentCount > 0 && (
-            <span>{commentCount} comment{commentCount !== 1 ? "s" : ""}</span>
+            <button
+              onClick={() => setShowAllComments(true)}
+              className="hover:underline"
+            >
+              {commentCount} comment{commentCount !== 1 ? "s" : ""}
+            </button>
           )}
         </div>
       )}
@@ -740,14 +774,22 @@ function FeedCard({
           onClick={handleLike}
           disabled={likePending || !currentUserId}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
+            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-all active:scale-95",
             liked
               ? "text-[#1E6FFF] bg-[#EFF6FF] dark:text-[#60A5FA] dark:bg-[#1E3A5F]"
               : "text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white disabled:opacity-50"
           )}
         >
-          <ThumbsUp size={15} className={cn(liked && "fill-current")} />
+          <ThumbsUp size={15} className={cn("transition-transform duration-200", liked && "fill-current", pop && "scale-[1.4]")} />
           {liked ? "Liked" : "Like"}
+        </button>
+
+        <button
+          onClick={() => { setShowAllComments(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-[#64748B] dark:text-[#4B6A8A] hover:bg-[#F1F5F9] dark:hover:bg-[#1E3A5F] hover:text-[#1E6FFF] dark:hover:text-white transition-all active:scale-95"
+        >
+          <MessageSquare size={15} />
+          Comment
         </button>
 
         {post.type === "job_request" && (
@@ -773,7 +815,15 @@ function FeedCard({
       <div className="border-t border-[#F1F5F9] dark:border-[#1E3A5F] px-5 pt-4 pb-3.5">
         {comments.length > 0 && (
           <div className="flex flex-col gap-3 mb-3">
-            {comments.map((c) => (
+            {!showAllComments && comments.length > 2 && (
+              <button
+                onClick={() => setShowAllComments(true)}
+                className="text-[13px] font-semibold text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E6FFF] dark:hover:text-white transition-colors w-fit"
+              >
+                View all {comments.length} comments
+              </button>
+            )}
+            {(showAllComments ? comments : comments.slice(-2)).map((c) => (
               <div key={c.id} className="flex items-start gap-2.5">
                 <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
                 <div className="flex-1 min-w-0">
