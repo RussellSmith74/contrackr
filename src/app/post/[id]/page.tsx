@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown } from "lucide-react";
+import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Award } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -17,7 +17,7 @@ interface Post {
   source: "feed_post" | "job_post";
   type: "job_request" | "work_showcase" | "promotion" | "update";
   author_id: string;
-  author: { name: string; avatar: string | null; role: string; is_admin: boolean; is_founder: boolean; is_day_one: boolean; is_verified: boolean };
+  author: { name: string; avatar: string | null; role: string; is_admin: boolean; is_founder: boolean; is_day_one: boolean; is_verified: boolean; is_licensed: boolean };
   location: string;
   category: string;
   title: string;
@@ -80,18 +80,18 @@ export default function PostPage() {
       if (source === "job_post") {
         const { data } = await supabase
           .from("job_posts")
-          .select("id, title, description, category, location, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified))")
+          .select("id, title, description, category, location, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified, is_licensed))")
           .eq("id", id)
           .single();
         if (data) {
-          const profile = data.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+          const profile = data.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean } | { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean }[] | null } | null;
           const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
           setPost({
             id: data.id,
             source: "job_post",
             type: "job_request",
             author_id: profile?.id ?? "",
-            author: { name: profile?.full_name ?? "Customer", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
+            author: { name: profile?.full_name ?? "Customer", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false, is_licensed: cp?.is_licensed ?? false },
             location: data.location,
             category: data.category,
             title: data.title,
@@ -110,11 +110,11 @@ export default function PostPage() {
       } else {
         const { data } = await supabase
           .from("feed_posts")
-          .select("id, content, post_type, category, location, photos, likes_count, created_at, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified))")
+          .select("id, content, post_type, category, location, photos, likes_count, created_at, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified, is_licensed))")
           .eq("id", id)
           .single();
         if (data) {
-          const profile = data.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+          const profile = data.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean } | { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean }[] | null } | null;
           const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
           const postType = data.post_type as "work_showcase" | "promotion" | "update";
           setPost({
@@ -122,7 +122,7 @@ export default function PostPage() {
             source: "feed_post",
             type: postType,
             author_id: profile?.id ?? "",
-            author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
+            author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false, is_licensed: cp?.is_licensed ?? false },
             location: data.location ?? "",
             category: data.category ?? "",
             title: data.content.split("\n")[0].slice(0, 80),
@@ -300,6 +300,9 @@ export default function PostPage() {
                       )}
                       {post.author.is_verified && (
                         <BadgeCheck size={15} className="text-[#059669] flex-shrink-0" aria-label="Verified" />
+                      )}
+                      {post.author.is_licensed && (
+                        <Award size={15} className="text-[#7C3AED] flex-shrink-0" aria-label="Licensed" />
                       )}
                       {post.author.is_day_one && (
                         <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />

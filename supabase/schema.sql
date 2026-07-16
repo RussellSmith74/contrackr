@@ -51,6 +51,9 @@ create table public.contractor_profiles (
   total_jobs_completed integer default 0,
   profile_completeness integer default 0,
   is_verified boolean default false,
+  -- Granted manually after the license_number above is cross-checked
+  -- against the state licensing board. Never auto-set from user input.
+  is_licensed boolean default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

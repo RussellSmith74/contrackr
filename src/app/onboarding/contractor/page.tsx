@@ -42,6 +42,17 @@ export default function ContractorOnboarding() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  // Snapshot of the form as first loaded, so we can warn before discarding edits.
+  const initialFormRef = useRef<string | null>(null);
+
+  const handleExit = () => {
+    const dirty =
+      initialFormRef.current !== null && initialFormRef.current !== JSON.stringify(form);
+    if (dirty && !confirm("Discard your changes? Anything you've entered here won't be saved.")) {
+      return;
+    }
+    router.push(existingProfileId ? `/contractors/${existingProfileId}` : "/feed");
+  };
 
   useEffect(() => {
     const loadExisting = async () => {
@@ -55,8 +66,7 @@ export default function ContractorOnboarding() {
       ]);
 
       if (existing) {
-        setExistingProfileId(existing.id);
-        setForm({
+        const loaded = {
           businessName: existing.business_name ?? "",
           ownerName: existing.owner_name ?? "",
           phone: baseProfile?.phone ?? "",
@@ -67,9 +77,25 @@ export default function ContractorOnboarding() {
           bio: existing.bio ?? "",
           categories: existing.categories ?? [],
           serviceAreas: (existing.service_areas ?? []).join(", "),
-        });
+        };
+        setExistingProfileId(existing.id);
+        setForm(loaded);
+        initialFormRef.current = JSON.stringify(loaded);
         if (existing.lat && existing.lng) setLocationCoords({ lat: existing.lat, lng: existing.lng });
         if (baseProfile?.avatar_url) setAvatarUrl(baseProfile.avatar_url);
+      } else {
+        initialFormRef.current = JSON.stringify({
+          businessName: "",
+          ownerName: "",
+          phone: "",
+          website: "",
+          licenseNumber: "",
+          isInsured: false,
+          yearsExperience: "",
+          bio: "",
+          categories: [] as string[],
+          serviceAreas: "",
+        });
       }
       setLoadingExisting(false);
     };
@@ -266,9 +292,20 @@ export default function ContractorOnboarding() {
             </div>
             <span className="font-black text-[#0A1628] text-lg">Contrakr</span>
           </div>
-          <span className="text-sm text-[#6B7280]">
-            Step {step} of {STEPS.length - 1}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-[#6B7280]">
+              Step {step} of {STEPS.length - 1}
+            </span>
+            <button
+              type="button"
+              onClick={handleExit}
+              className="flex items-center gap-1.5 text-sm font-semibold text-[#6B7280] hover:text-[#0A1628] hover:bg-[#F3F4F6] px-3 py-1.5 rounded-lg transition-colors"
+              title={existingProfileId ? "Discard changes and go back" : "Finish this later"}
+            >
+              <X size={15} />
+              {existingProfileId ? "Cancel" : "Finish later"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -393,6 +430,7 @@ export default function ContractorOnboarding() {
                 placeholder="MS-123456"
                 value={form.licenseNumber}
                 onChange={handleChange}
+                hint="We check this against your state's licensing board. Once confirmed, a Licensed badge is added to your profile."
               />
               <label className="flex items-center gap-3 cursor-pointer">
                 <input

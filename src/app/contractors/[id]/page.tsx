@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   Share2,
   Check,
+  Award,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -45,6 +47,7 @@ interface ContractorProfile {
   total_reviews: number;
   total_jobs_completed: number;
   is_verified: boolean;
+  is_licensed: boolean;
   created_at: string;
   profiles: {
     avatar_url: string | null;
@@ -93,6 +96,7 @@ export default function ContractorProfilePage() {
   const [notFound, setNotFound] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const handleShare = async () => {
     try {
@@ -137,13 +141,16 @@ export default function ContractorProfilePage() {
       if (!id) return;
       const supabase = createClient();
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+
       const { data: cp } = await supabase
         .from("contractor_profiles")
         .select(`
           id, user_id, business_name, owner_name, bio, logo_url,
           categories, service_areas, years_experience, website,
           license_number, is_insured, avg_rating, total_reviews,
-          total_jobs_completed, is_verified, created_at,
+          total_jobs_completed, is_verified, is_licensed, created_at,
           profiles ( avatar_url, location, phone, is_admin, is_founder )
         `)
         .eq("id", id)
@@ -257,15 +264,26 @@ export default function ContractorProfilePage() {
                 >
                   {copied ? <Check size={16} className="text-[#059669]" /> : <Share2 size={16} />}
                 </button>
-                <Button variant="outline" size="md" onClick={startConversation} loading={messaging}>
-                  <MessageSquare size={16} />
-                  Message
-                </Button>
-                <Link href="/post-job">
-                  <Button variant="primary" size="md">
-                    Hire Now
-                  </Button>
-                </Link>
+                {currentUserId === c.user_id ? (
+                  <Link href="/onboarding/contractor">
+                    <Button variant="primary" size="md">
+                      <Pencil size={16} />
+                      Edit Profile
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Button variant="outline" size="md" onClick={startConversation} loading={messaging}>
+                      <MessageSquare size={16} />
+                      Message
+                    </Button>
+                    <Link href="/post-job">
+                      <Button variant="primary" size="md">
+                        Hire Now
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
@@ -282,6 +300,12 @@ export default function ContractorProfilePage() {
                   <Badge variant="blue" size="sm">
                     <CheckCircle size={11} className="mr-1" />
                     Verified
+                  </Badge>
+                )}
+                {c.is_licensed && (
+                  <Badge size="sm" className="bg-[#F5F3FF] text-[#7C3AED] dark:bg-[#2E1065] dark:text-[#A78BFA]">
+                    <Award size={11} className="mr-1" />
+                    Licensed
                   </Badge>
                 )}
                 {c.is_insured && (
@@ -549,9 +573,19 @@ export default function ContractorProfilePage() {
                   </div>
                 )}
                 {c.license_number && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#6B7280] dark:text-[#94A3B8]">License</span>
-                    <span className="font-semibold text-[#0D0D0D] dark:text-white">{c.license_number}</span>
+                  <div className="flex items-center justify-between text-sm gap-3">
+                    <span className="text-[#6B7280] dark:text-[#94A3B8] flex-shrink-0">License</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold text-[#0D0D0D] dark:text-white truncate">{c.license_number}</span>
+                      {c.is_licensed ? (
+                        <Badge size="sm" className="bg-[#F5F3FF] text-[#7C3AED] dark:bg-[#2E1065] dark:text-[#A78BFA] flex-shrink-0">
+                          <Award size={10} className="mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="yellow" size="sm" className="flex-shrink-0">Pending review</Badge>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">
@@ -563,6 +597,7 @@ export default function ContractorProfilePage() {
               </div>
             </div>
 
+            {currentUserId !== c.user_id && (
             <div className="bg-[#0A1628] rounded-2xl p-5 text-white text-center">
               <h3 className="font-black text-lg mb-2">Ready to hire?</h3>
               <p className="text-[#94A3B8] text-sm mb-4">
@@ -578,6 +613,7 @@ export default function ContractorProfilePage() {
                 Send a Message
               </Button>
             </div>
+            )}
           </div>
         </div>
       </div>

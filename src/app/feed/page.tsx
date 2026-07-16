@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone, Award } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -17,7 +17,7 @@ interface Post {
   source: "job_post" | "feed_post";
   type: "job_request" | "work_showcase" | "promotion" | "update";
   author_id: string;
-  author: { name: string; avatar: string | null; role: "customer" | "contractor"; is_admin: boolean; is_founder: boolean; is_day_one: boolean; is_verified: boolean };
+  author: { name: string; avatar: string | null; role: "customer" | "contractor"; is_admin: boolean; is_founder: boolean; is_day_one: boolean; is_verified: boolean; is_licensed: boolean };
   location: string;
   lat: number | null;
   lng: number | null;
@@ -81,7 +81,7 @@ export default function FeedPage() {
     // Job posts
     const { data: jobPosts } = await supabase
       .from("job_posts")
-      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified))")
+      .select("id, title, description, category, location, lat, lng, timeline, budget_range, photos, bid_count, created_at, status, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified, is_licensed))")
       .eq("status", "open")
       .order("created_at", { ascending: false })
       .limit(100);
@@ -89,12 +89,12 @@ export default function FeedPage() {
     // Contractor feed posts
     const { data: feedPosts } = await supabase
       .from("feed_posts")
-      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified))")
+      .select("id, content, post_type, category, location, lat, lng, photos, likes_count, comments_count, created_at, profiles(id, full_name, avatar_url, is_admin, is_founder, contractor_profiles(is_day_one, is_verified, is_licensed))")
       .order("created_at", { ascending: false })
       .limit(100);
 
     const realJobPosts: Post[] = (jobPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean } | { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean }[] | null } | null;
       const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
       const pAny = p as { lat?: number | null; lng?: number | null };
       return {
@@ -102,7 +102,7 @@ export default function FeedPage() {
         source: "job_post",
         type: "job_request",
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
+        author: { name: profile?.full_name ?? "Anonymous", avatar: profile?.avatar_url ?? null, role: "customer", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false, is_licensed: cp?.is_licensed ?? false },
         location: p.location,
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -121,7 +121,7 @@ export default function FeedPage() {
     });
 
     const realFeedPosts: Post[] = (feedPosts ?? []).map((p) => {
-      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean } | { is_day_one?: boolean; is_verified?: boolean }[] | null } | null;
+      const profile = p.profiles as unknown as { id: string; full_name: string; avatar_url: string | null; is_admin?: boolean; is_founder?: boolean; contractor_profiles?: { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean } | { is_day_one?: boolean; is_verified?: boolean; is_licensed?: boolean }[] | null } | null;
       const cp = Array.isArray(profile?.contractor_profiles) ? profile?.contractor_profiles[0] : profile?.contractor_profiles;
       const postType = p.post_type as "work_showcase" | "promotion" | "update";
       const pAny = p as { lat?: number | null; lng?: number | null };
@@ -130,7 +130,7 @@ export default function FeedPage() {
         source: "feed_post",
         type: postType,
         author_id: profile?.id ?? "",
-        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false },
+        author: { name: profile?.full_name ?? "Contractor", avatar: profile?.avatar_url ?? null, role: "contractor", is_admin: profile?.is_admin ?? false, is_founder: profile?.is_founder ?? false, is_day_one: cp?.is_day_one ?? false, is_verified: cp?.is_verified ?? false, is_licensed: cp?.is_licensed ?? false },
         location: p.location ?? "",
         lat: pAny.lat ?? null,
         lng: pAny.lng ?? null,
@@ -596,6 +596,9 @@ function FeedCard({
                   )}
                   {post.author.is_verified && (
                     <BadgeCheck size={15} className="text-[#059669] flex-shrink-0" aria-label="Verified" />
+                  )}
+                  {post.author.is_licensed && (
+                    <Award size={15} className="text-[#7C3AED] flex-shrink-0" aria-label="Licensed" />
                   )}
                   {post.author.is_day_one && (
                     <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />
