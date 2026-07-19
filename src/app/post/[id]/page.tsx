@@ -210,10 +210,20 @@ export default function PostPage() {
     if (!post || !confirm("Delete this post?")) return;
     setDeleting(true);
     const supabase = createClient();
-    if (post.source === "feed_post") {
-      await supabase.from("feed_posts").delete().eq("id", id);
-    } else {
-      await supabase.from("job_posts").delete().eq("id", id);
+    const table = post.source === "feed_post" ? "feed_posts" : "job_posts";
+    const { error, count } = await supabase
+      .from(table)
+      .delete({ count: "exact" })
+      .eq("id", id);
+
+    if (error || count === 0) {
+      setDeleting(false);
+      alert(
+        error
+          ? `Couldn't delete this post: ${error.message}`
+          : "Couldn't delete this post — you don't have permission to remove it."
+      );
+      return;
     }
     router.push("/feed");
   };
