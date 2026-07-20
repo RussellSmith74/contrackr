@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input, Textarea } from "@/components/ui/Input";
+import { StarRating } from "@/components/ui/StarRating";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -80,6 +81,9 @@ export default function JobDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bidSubmitted, setBidSubmitted] = useState(false);
   const [actionPending, setActionPending] = useState(false);
+  const [existingReview, setExistingReview] = useState<{ rating: number; comment: string; reviewer_name?: string } | null>(null);
+  const [reviewForm, setReviewForm] = useState({ rating: 0, comment: "" });
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [error, setError] = useState("");
 
   const isOwner = !!(job && myId && job.customer_id === myId);
@@ -102,6 +106,17 @@ export default function JobDetailPage() {
 
       const profilesData = jobData.profiles as unknown as { full_name: string; avatar_url: string | null; location: string | null } | null;
       setJob({ ...jobData, customer: profilesData });
+
+      // A completed job may already have a review (one per job).
+      const { data: review } = await supabase
+        .from("reviews")
+        .select("rating, comment, profiles:reviewer_id(full_name)")
+        .eq("job_id", jobId)
+        .maybeSingle();
+      if (review) {
+        const rp = review.profiles as unknown as { full_name: string } | null;
+        setExistingReview({ rating: review.rating, comment: review.comment, reviewer_name: rp?.full_name });
+      }
 
       if (user) {
         setMyId(user.id);
@@ -269,6 +284,28 @@ export default function JobDetailPage() {
     setActionPending(false);
   };
 
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!job || !acceptedBid?.contractor || reviewForm.rating === 0 || !reviewForm.comment.trim()) return;
+    setSubmittingReview(true);
+    const supabase = createClient();
+    const { error: reviewErr } = await supabase.from("reviews").insert({
+      job_id: job.id,
+      reviewer_id: myId,
+      contractor_id: acceptedBid.contractor.id,
+      rating: reviewForm.rating,
+      comment: reviewForm.comment.trim(),
+    });
+    if (reviewErr) {
+      setSubmittingReview(false);
+      alert(`Couldn't submit your review: ${reviewErr.message}`);
+      return;
+    }
+    setExistingReview({ rating: reviewForm.rating, comment: reviewForm.comment.trim(), reviewer_name: job.customer?.full_name });
+    await notify(acceptedBid.contractor.user_id, "review", `You got a ${reviewForm.rating}-star review`, reviewForm.comment.trim().slice(0, 100));
+    setSubmittingReview(false);
+  };
+
   const getCategoryLabel = (id: string) =>
     SERVICE_CATEGORIES.find((c) => c.id === id)?.label || id;
   const getCategoryIcon = (id: string) =>
@@ -401,13 +438,57 @@ export default function JobDetailPage() {
             <h2 className="font-bold text-[#0A1628] dark:text-white mb-4">Bids ({jobBids.length})</h2>
 
             {job.status === "completed" ? (
-              <div className="flex items-start gap-3 bg-[#ECFDF5] dark:bg-[#064E3B]/40 border border-[#D1FAE5] dark:border-[#065F46] rounded-xl p-4">
-                <CheckCircle size={20} className="text-[#059669] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[#065F46] dark:text-[#34D399]">Job completed</p>
-                  <p className="text-sm text-[#047857] dark:text-[#6EE7B7] mt-0.5">
-                    You and {acceptedBid?.contractor?.business_name ?? "the contractor"} both confirmed this job is done.
-                  </p>
+              <div>
+                <div className="flex items-start gap-3 bg-[#ECFDF5] dark:bg-[#064E3B]/40 border border-[#D1FAE5] dark:border-[#065F46] rounded-xl p-4">
+                  <CheckCircle size={20} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[#065F46] dark:text-[#34D399]">Job completed</p>
+                    <p className="text-sm text-[#047857] dark:text-[#6EE7B7] mt-0.5">
+                      You and {acceptedBid?.contractor?.business_name ?? "the contractor"} both confirmed this job is done.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  {existingReview ? (
+                    <div className="border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-4">
+                      <p className="text-sm font-bold text-[#0A1628] dark:text-white mb-2">Your review</p>
+                      <StarRating rating={existingReview.rating} size="md" />
+                      <p className="text-sm text-[#4B5563] dark:text-[#CBD5E1] mt-2 leading-relaxed">{existingReview.comment}</p>
+                    </div>
+                  ) : acceptedBid ? (
+                    <form onSubmit={handleSubmitReview} className="border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-4">
+                      <p className="text-sm font-bold text-[#0A1628] dark:text-white mb-1">
+                        Leave {acceptedBid.contractor?.business_name ?? "the contractor"} a review
+                      </p>
+                      <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mb-3">
+                        Your rating helps other homeowners hire with confidence.
+                      </p>
+                      <StarRating
+                        rating={reviewForm.rating}
+                        size="lg"
+                        interactive
+                        onRate={(r) => setReviewForm((p) => ({ ...p, rating: r }))}
+                      />
+                      <Textarea
+                        placeholder="How was the work? Would you hire them again?"
+                        value={reviewForm.comment}
+                        onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))}
+                        rows={3}
+                        className="mt-3 dark:bg-[#0A1628] dark:text-white dark:border-[#1E3A5F]"
+                      />
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="sm"
+                        className="mt-3"
+                        loading={submittingReview}
+                        disabled={reviewForm.rating === 0 || !reviewForm.comment.trim()}
+                      >
+                        Submit Review
+                      </Button>
+                    </form>
+                  ) : null}
                 </div>
               </div>
             ) : acceptedBid ? (
@@ -483,14 +564,25 @@ export default function JobDetailPage() {
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
             {bidSubmitted || existingBid ? (
               job.status === "completed" && existingBid?.status === "accepted" ? (
-                <div className="flex items-start gap-3">
-                  <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-[#0A1628] dark:text-white">Job completed</p>
-                    <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
-                      Both sides confirmed this job is done — it now counts toward your track record.
-                    </p>
+                <div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-[#0A1628] dark:text-white">Job completed</p>
+                      <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                        Both sides confirmed this job is done — it now counts toward your track record.
+                      </p>
+                    </div>
                   </div>
+                  {existingReview && (
+                    <div className="mt-4 pt-4 border-t border-[#F3F4F6] dark:border-[#1E3A5F]">
+                      <p className="text-sm font-bold text-[#0A1628] dark:text-white mb-2">
+                        {existingReview.reviewer_name ?? "The customer"} left you a review
+                      </p>
+                      <StarRating rating={existingReview.rating} size="md" />
+                      <p className="text-sm text-[#4B5563] dark:text-[#CBD5E1] mt-2 leading-relaxed">{existingReview.comment}</p>
+                    </div>
+                  )}
                 </div>
               ) : existingBid?.status === "accepted" ? (
                 <div>
