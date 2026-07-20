@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, MapPin, CheckCircle, Shield, Briefcase, Loader2 } from "lucide-react";
+import { Search, MapPin, CheckCircle, Shield, Briefcase, Loader2, Award } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import { Badge } from "@/components/ui/Badge";
@@ -25,6 +25,7 @@ interface Contractor {
   years_experience: number | null;
   is_insured: boolean;
   is_verified: boolean;
+  is_licensed: boolean;
   avg_rating: number;
   total_reviews: number;
   total_jobs_completed: number;
@@ -42,6 +43,8 @@ function SearchContent() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(initialCategory);
   const [minRating, setMinRating] = useState(0);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [licensedOnly, setLicensedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"rating" | "jobs">("rating");
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -79,6 +82,7 @@ function SearchContent() {
           years_experience,
           is_insured,
           is_verified,
+          is_licensed,
           avg_rating,
           total_reviews,
           total_jobs_completed,
@@ -113,6 +117,8 @@ function SearchContent() {
     .filter((c) => {
       if (category && !c.categories.includes(category)) return false;
       if (minRating && c.avg_rating < minRating) return false;
+      if (verifiedOnly && !c.is_verified) return false;
+      if (licensedOnly && !c.is_licensed) return false;
       if (query) {
         const q = query.toLowerCase();
         if (
@@ -194,7 +200,36 @@ function SearchContent() {
               </button>
             ))}
           </div>
-          <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[#F8FAFC] to-transparent pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[#F8FAFC] dark:from-[#0A1628] to-transparent pointer-events-none" />
+        </div>
+
+        {/* Trust filters */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Filter:</span>
+          <button
+            onClick={() => setVerifiedOnly((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+              verifiedOnly
+                ? "bg-[#EFF6FF] dark:bg-[#1E3A5F] border-[#1E6FFF] text-[#1E6FFF] dark:text-[#60A5FA]"
+                : "bg-white dark:bg-[#0D1F3C] border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:border-[#1E6FFF]"
+            )}
+          >
+            <CheckCircle size={12} />
+            Verified
+          </button>
+          <button
+            onClick={() => setLicensedOnly((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+              licensedOnly
+                ? "bg-[#F5F3FF] dark:bg-[#2E1065] border-[#7C3AED] text-[#7C3AED] dark:text-[#A78BFA]"
+                : "bg-white dark:bg-[#0D1F3C] border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:border-[#7C3AED]"
+            )}
+          >
+            <Award size={12} />
+            Licensed
+          </button>
         </div>
 
         {/* Results header */}
@@ -274,6 +309,12 @@ function SearchContent() {
                           <Badge variant="blue" size="sm">
                             <CheckCircle size={10} className="mr-1" />
                             Verified
+                          </Badge>
+                        )}
+                        {contractor.is_licensed && (
+                          <Badge size="sm" className="bg-[#F5F3FF] text-[#7C3AED] dark:bg-[#2E1065] dark:text-[#A78BFA]">
+                            <Award size={10} className="mr-1" />
+                            Licensed
                           </Badge>
                         )}
                         {contractor.is_insured && (
