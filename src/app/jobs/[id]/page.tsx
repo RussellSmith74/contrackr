@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { MapPin, Clock, DollarSign, ArrowLeft, CheckCircle, Loader2, ImageIcon } from "lucide-react";
+import { MapPin, Clock, DollarSign, ArrowLeft, CheckCircle, Loader2, ImageIcon, MessageSquare, BadgeCheck, Award, Hourglass } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 
 interface JobDetail {
   id: string;
+  customer_id: string;
   title: string;
   description: string;
   category: string;
@@ -23,6 +24,7 @@ interface JobDetail {
   timeline: string | null;
   budget_range: string | null;
   status: "open" | "in_progress" | "completed" | "cancelled";
+  customer_completed: boolean;
   photos: string[];
   bid_count: number;
   created_at: string;
@@ -39,7 +41,26 @@ interface ExistingBid {
   message: string;
   timeline: string | null;
   status: string;
+  contractor_completed: boolean;
   created_at: string;
+}
+
+interface JobBid {
+  id: string;
+  amount: number;
+  message: string;
+  timeline: string | null;
+  status: string;
+  contractor_completed: boolean;
+  created_at: string;
+  contractor: {
+    id: string;
+    user_id: string;
+    business_name: string;
+    avatar_url: string | null;
+    is_licensed: boolean;
+    is_verified: boolean;
+  } | null;
 }
 
 export default function JobDetailPage() {
@@ -49,14 +70,20 @@ export default function JobDetailPage() {
 
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [myId, setMyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"customer" | "contractor" | null>(null);
   const [contractorProfileId, setContractorProfileId] = useState<string | null>(null);
   const [existingBid, setExistingBid] = useState<ExistingBid | null>(null);
+  const [jobBids, setJobBids] = useState<JobBid[]>([]);
   const [showBidForm, setShowBidForm] = useState(false);
   const [bidForm, setBidForm] = useState({ amount: "", message: "", timeline: "" });
   const [submitting, setSubmitting] = useState(false);
   const [bidSubmitted, setBidSubmitted] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
   const [error, setError] = useState("");
+
+  const isOwner = !!(job && myId && job.customer_id === myId);
+  const acceptedBid = jobBids.find((b) => b.status === "accepted") ?? null;
 
   useEffect(() => {
     const load = async () => {
@@ -65,7 +92,7 @@ export default function JobDetailPage() {
       const [{ data: jobData }, { data: { user } }] = await Promise.all([
         supabase
           .from("job_posts")
-          .select("id, title, description, category, location, timeline, budget_range, status, photos, bid_count, created_at, profiles:customer_id(full_name, avatar_url, location)")
+          .select("id, customer_id, title, description, category, location, timeline, budget_range, status, customer_completed, photos, bid_count, created_at, profiles:customer_id(full_name, avatar_url, location)")
           .eq("id", jobId)
           .single(),
         supabase.auth.getUser(),
@@ -77,6 +104,7 @@ export default function JobDetailPage() {
       setJob({ ...jobData, customer: profilesData });
 
       if (user) {
+        setMyId(user.id);
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
@@ -84,6 +112,30 @@ export default function JobDetailPage() {
           .single();
 
         setUserRole(profile?.role ?? null);
+
+        // Job owner: load every bid with contractor info so they can review + accept.
+        if (jobData.customer_id === user.id) {
+          const { data: allBids } = await supabase
+            .from("bids")
+            .select("id, amount, message, timeline, status, contractor_completed, created_at, contractor:contractor_profiles(id, user_id, business_name, is_licensed, is_verified, profiles(avatar_url))")
+            .eq("job_id", jobId)
+            .order("created_at", { ascending: true });
+          setJobBids(
+            (allBids ?? []).map((b) => {
+              const c = b.contractor as unknown as { id: string; user_id: string; business_name: string; is_licensed: boolean; is_verified: boolean; profiles: { avatar_url: string | null } | null } | null;
+              return {
+                id: b.id,
+                amount: b.amount,
+                message: b.message,
+                timeline: b.timeline,
+                status: b.status,
+                contractor_completed: b.contractor_completed,
+                created_at: b.created_at,
+                contractor: c ? { id: c.id, user_id: c.user_id, business_name: c.business_name, avatar_url: c.profiles?.avatar_url ?? null, is_licensed: c.is_licensed, is_verified: c.is_verified } : null,
+              };
+            })
+          );
+        }
 
         if (profile?.role === "contractor") {
           const { data: cp } = await supabase
@@ -96,7 +148,7 @@ export default function JobDetailPage() {
             setContractorProfileId(cp.id);
             const { data: bid } = await supabase
               .from("bids")
-              .select("id, amount, message, timeline, status, created_at")
+              .select("id, amount, message, timeline, status, contractor_completed, created_at")
               .eq("job_id", jobId)
               .eq("contractor_id", cp.id)
               .single();
@@ -162,6 +214,59 @@ export default function JobDetailPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const notify = async (userId: string | undefined, type: string, title: string, body: string) => {
+    if (!userId || userId === myId) return;
+    await createClient().from("notifications").insert({
+      user_id: userId, type, title, body, data: { link: `/jobs/${jobId}` },
+    });
+  };
+
+  const handleAccept = async (bid: JobBid) => {
+    if (!isOwner || !job) return;
+    setActionPending(true);
+    const supabase = createClient();
+
+    // Reset any previously-accepted bid, then accept this one (others stay pending/open).
+    await supabase.from("bids").update({ status: "pending" }).eq("job_id", job.id).eq("status", "accepted");
+    const { error, count } = await supabase.from("bids").update({ status: "accepted" }, { count: "exact" }).eq("id", bid.id);
+    if (error || count === 0) {
+      setActionPending(false);
+      alert(error ? `Couldn't accept this bid: ${error.message}` : "Couldn't accept this bid.");
+      return;
+    }
+    await supabase.from("job_posts").update({ status: "in_progress" }).eq("id", job.id);
+
+    await notify(bid.contractor?.user_id, "bid", "Your bid was accepted!", `${job.title} — $${Number(bid.amount).toLocaleString()}`);
+
+    setJobBids((prev) => prev.map((b) => ({
+      ...b,
+      status: b.id === bid.id ? "accepted" : b.status === "accepted" ? "pending" : b.status,
+    })));
+    setJob((prev) => (prev ? { ...prev, status: "in_progress" } : prev));
+    setActionPending(false);
+  };
+
+  const handleMarkComplete = async () => {
+    if (!job) return;
+    setActionPending(true);
+    const supabase = createClient();
+
+    if (isOwner) {
+      await supabase.from("job_posts").update({ customer_completed: true }).eq("id", job.id);
+      setJob((prev) => (prev ? { ...prev, customer_completed: true } : prev));
+      await notify(acceptedBid?.contractor?.user_id, "bid", "Customer marked the job complete", `${job.title} — confirm on your end to close it out`);
+    } else if (existingBid) {
+      await supabase.from("bids").update({ contractor_completed: true }).eq("id", existingBid.id);
+      setExistingBid((prev) => (prev ? { ...prev, contractor_completed: true } : prev));
+      await notify(job.customer_id, "bid", "Contractor marked the job complete", `${job.title} — confirm on your end to close it out`);
+    }
+
+    // The DB trigger flips status to "completed" once both sides sign off — re-read it.
+    const { data: fresh } = await supabase.from("job_posts").select("status, customer_completed").eq("id", jobId).single();
+    if (fresh) setJob((prev) => (prev ? { ...prev, status: fresh.status as JobDetail["status"], customer_completed: fresh.customer_completed } : prev));
+    setActionPending(false);
   };
 
   const getCategoryLabel = (id: string) =>
@@ -290,26 +395,144 @@ export default function JobDetailPage() {
           )}
         </div>
 
+        {/* Owner: review bids, accept, and confirm completion */}
+        {isOwner && (
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 mb-5">
+            <h2 className="font-bold text-[#0A1628] dark:text-white mb-4">Bids ({jobBids.length})</h2>
+
+            {job.status === "completed" ? (
+              <div className="flex items-start gap-3 bg-[#ECFDF5] dark:bg-[#064E3B]/40 border border-[#D1FAE5] dark:border-[#065F46] rounded-xl p-4">
+                <CheckCircle size={20} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-[#065F46] dark:text-[#34D399]">Job completed</p>
+                  <p className="text-sm text-[#047857] dark:text-[#6EE7B7] mt-0.5">
+                    You and {acceptedBid?.contractor?.business_name ?? "the contractor"} both confirmed this job is done.
+                  </p>
+                </div>
+              </div>
+            ) : acceptedBid ? (
+              <div className="bg-[#EFF6FF] dark:bg-[#1E3A5F] border border-[#BFDBFE] dark:border-[#264a73] rounded-xl p-4 mb-4">
+                <p className="text-sm font-bold text-[#0A1628] dark:text-white">
+                  You accepted {acceptedBid.contractor?.business_name ?? "a contractor"}
+                </p>
+                {job.customer_completed ? (
+                  <p className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8] mt-1">
+                    <Hourglass size={13} /> Waiting for {acceptedBid.contractor?.business_name ?? "the contractor"} to confirm completion.
+                  </p>
+                ) : (
+                  <>
+                    {acceptedBid.contractor_completed && (
+                      <p className="text-sm text-[#059669] dark:text-[#34D399] mt-1">
+                        {acceptedBid.contractor?.business_name ?? "The contractor"} marked this done — confirm to close it out.
+                      </p>
+                    )}
+                    <Button variant="primary" size="sm" className="mt-3" loading={actionPending} onClick={handleMarkComplete}>
+                      <CheckCircle size={15} /> Mark as completed
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {jobBids.length === 0 ? (
+              <p className="text-sm text-[#9CA3AF] dark:text-[#64748B] text-center py-6">
+                No bids yet. Contractors who bid on your job will show up here.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {jobBids.map((b) => (
+                  <div key={b.id} className="border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <Link href={b.contractor ? `/contractors/${b.contractor.id}` : "#"} className="flex items-center gap-3 min-w-0">
+                        <Avatar src={b.contractor?.avatar_url} name={b.contractor?.business_name ?? "Contractor"} size="sm" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-[#0A1628] dark:text-white truncate">{b.contractor?.business_name ?? "Contractor"}</p>
+                            {b.contractor?.is_licensed && <Award size={13} className="text-[#7C3AED] flex-shrink-0" aria-label="Licensed" />}
+                            {b.contractor?.is_verified && <BadgeCheck size={13} className="text-[#059669] flex-shrink-0" aria-label="Verified" />}
+                          </div>
+                          <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{b.timeline ?? "No timeline given"}</p>
+                        </div>
+                      </Link>
+                      <span className="text-base font-black text-[#0A1628] dark:text-white flex-shrink-0">${Number(b.amount).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-[#4B5563] dark:text-[#CBD5E1] mt-3 leading-relaxed">{b.message}</p>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F3F4F6] dark:border-[#1E3A5F]">
+                      {b.contractor ? (
+                        <Link href={`/messages?with=${b.contractor.user_id}`}>
+                          <Button variant="ghost" size="sm"><MessageSquare size={14} /> Message</Button>
+                        </Link>
+                      ) : <span />}
+                      {b.status === "accepted" ? (
+                        <Badge variant="blue" size="sm"><CheckCircle size={11} className="mr-1" /> Accepted</Badge>
+                      ) : job.status !== "completed" && (
+                        <Button variant="primary" size="sm" loading={actionPending} onClick={() => handleAccept(b)}>
+                          {acceptedBid ? "Accept instead" : "Accept bid"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Bid section — contractors only */}
         {userRole === "contractor" && (
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
             {bidSubmitted || existingBid ? (
-              <div className="flex items-start gap-3">
-                <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[#0A1628]">Bid submitted</p>
-                  {existingBid && (
-                    <p className="text-sm text-[#6B7280] mt-0.5">
-                      ${existingBid.amount.toLocaleString()} — {existingBid.message.slice(0, 80)}{existingBid.message.length > 80 ? "..." : ""}
+              job.status === "completed" && existingBid?.status === "accepted" ? (
+                <div className="flex items-start gap-3">
+                  <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[#0A1628] dark:text-white">Job completed</p>
+                    <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                      Both sides confirmed this job is done — it now counts toward your track record.
                     </p>
-                  )}
-                  {bidSubmitted && !existingBid && (
-                    <p className="text-sm text-[#6B7280] mt-0.5">
-                      ${parseFloat(bidForm.amount).toLocaleString()} — your bid has been sent to the customer.
-                    </p>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : existingBid?.status === "accepted" ? (
+                <div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-[#0A1628] dark:text-white">Your bid was accepted</p>
+                      <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                        ${existingBid.amount.toLocaleString()} — the customer chose you for this job.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-[#F3F4F6] dark:border-[#1E3A5F]">
+                    {existingBid.contractor_completed ? (
+                      <p className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8]">
+                        <Hourglass size={13} /> You marked this done. Waiting for the customer to confirm.
+                      </p>
+                    ) : (
+                      <Button variant="primary" size="sm" loading={actionPending} onClick={handleMarkComplete}>
+                        <CheckCircle size={15} /> Mark as completed
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <CheckCircle size={22} className="text-[#059669] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[#0A1628] dark:text-white">Bid submitted</p>
+                    {existingBid && (
+                      <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                        ${existingBid.amount.toLocaleString()} — {existingBid.message.slice(0, 80)}{existingBid.message.length > 80 ? "..." : ""}
+                      </p>
+                    )}
+                    {bidSubmitted && !existingBid && (
+                      <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                        ${parseFloat(bidForm.amount).toLocaleString()} — your bid has been sent to the customer.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
             ) : !contractorProfileId ? (
               <div className="text-center py-4">
                 <p className="text-sm text-[#6B7280] mb-3">Complete your contractor profile to submit bids.</p>
