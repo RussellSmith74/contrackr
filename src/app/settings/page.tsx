@@ -52,7 +52,7 @@ export default function SettingsPage() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, location, avatar_url, role, bio, search_radius")
+        .select("id, full_name, email, phone, location, avatar_url, role, bio, search_radius, lat, lng")
         .eq("id", user.id)
         .single();
 
@@ -65,6 +65,9 @@ export default function SettingsPage() {
           bio: data.bio ?? "",
           search_radius: (data as { search_radius?: number }).search_radius ?? 50,
         });
+        // Keep existing coordinates so saving unrelated fields never wipes them.
+        const d = data as { lat?: number | null; lng?: number | null };
+        if (d.lat != null && d.lng != null) setLocationCoords({ lat: d.lat, lng: d.lng });
       }
       setLoading(false);
     };
@@ -115,19 +118,42 @@ export default function SettingsPage() {
 
     try {
       const supabase = createClient();
+
+      // Resolve coordinates for whatever location is currently typed, so the
+      // text and the map coordinates always agree — even if the user typed a
+      // new city without picking a dropdown suggestion.
+      let coords = locationCoords;
+      const loc = form.location.trim();
+      if (loc) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc)}&format=json&limit=1&countrycodes=us`,
+            { headers: { "User-Agent": "Contrakr/1.0 (contrakr.com)" } }
+          );
+          const geo = await res.json();
+          if (geo?.[0]) coords = { lat: parseFloat(geo[0].lat), lng: parseFloat(geo[0].lon) };
+        } catch {
+          /* network hiccup — fall back to the coordinates we already had */
+        }
+      } else {
+        coords = null;
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
           full_name: form.full_name,
           phone: form.phone || null,
           location: form.location || null,
-          lat: locationCoords?.lat ?? null,
-          lng: locationCoords?.lng ?? null,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
           bio: form.bio || null,
           search_radius: form.search_radius,
         })
         .eq("id", profile.id);
       if (updateError) throw updateError;
+
+      setLocationCoords(coords);
 
       setProfile((prev) => prev ? { ...prev, ...form } : prev);
       setSaved(true);

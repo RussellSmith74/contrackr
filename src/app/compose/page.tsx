@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { Input } from "@/components/ui/Input";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
+import { LocationInput } from "@/components/ui/LocationInput";
 import { createClient } from "@/lib/supabase/client";
 
 const POST_TYPES = [
@@ -25,6 +26,7 @@ export default function ComposePage() {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +35,12 @@ export default function ComposePage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push("/login"); return; }
       setUserId(user.id);
-      supabase.from("profiles").select("role, location").eq("id", user.id).single().then(({ data }) => {
+      supabase.from("profiles").select("role, location, lat, lng").eq("id", user.id).single().then(({ data }) => {
         setUserRole(data?.role ?? null);
         if (data?.location) setLocation(data.location);
+        // Default the post's coordinates to the contractor's own location.
+        const d = data as { lat?: number | null; lng?: number | null } | null;
+        if (d?.lat != null && d?.lng != null) setLocationCoords({ lat: d.lat, lng: d.lng });
         if (data?.role !== "contractor") router.push("/feed");
       });
     });
@@ -69,6 +74,8 @@ export default function ComposePage() {
         post_type: postType,
         category: category.trim() || null,
         location: location.trim() || null,
+        lat: locationCoords?.lat ?? null,
+        lng: locationCoords?.lng ?? null,
         photos: photoUrls,
       });
 
@@ -139,11 +146,14 @@ export default function ComposePage() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               />
-              <Input
+              <LocationInput
                 label="Location"
                 placeholder="City, State"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(val, coords) => {
+                  setLocation(val);
+                  if (coords) setLocationCoords(coords);
+                }}
               />
             </div>
           </div>

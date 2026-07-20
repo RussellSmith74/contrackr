@@ -184,6 +184,24 @@ export default function ContractorOnboarding() {
         .map((s) => s.trim())
         .filter(Boolean);
 
+      // Resolve coordinates for the primary service area so this contractor is
+      // reachable by the location/radius filters. Fall back to geocoding the
+      // typed area when no dropdown suggestion was picked.
+      const primaryArea = serviceAreasArray.slice(0, 2).join(", ").trim();
+      let coords = locationCoords;
+      if (!coords && primaryArea) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(primaryArea)}&format=json&limit=1&countrycodes=us`,
+            { headers: { "User-Agent": "Contrakr/1.0 (contrakr.com)" } }
+          );
+          const geo = await res.json();
+          if (geo?.[0]) coords = { lat: parseFloat(geo[0].lat), lng: parseFloat(geo[0].lon) };
+        } catch {
+          /* keep null on failure */
+        }
+      }
+
       const payload = {
         business_name: form.businessName,
         owner_name: form.ownerName,
@@ -194,8 +212,8 @@ export default function ContractorOnboarding() {
         website: form.website || null,
         license_number: form.licenseNumber || null,
         is_insured: form.isInsured,
-        lat: locationCoords?.lat ?? null,
-        lng: locationCoords?.lng ?? null,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
         profile_completeness: completeness(),
       };
 
@@ -205,10 +223,16 @@ export default function ContractorOnboarding() {
 
       if (profileError) throw profileError;
 
-      // Update base profile with phone
+      // Mirror phone, location, and coordinates onto the base profile — the feed's
+      // radius filter reads profiles.lat/lng, not contractor_profiles.
       await supabase
         .from("profiles")
-        .update({ phone: form.phone || null })
+        .update({
+          phone: form.phone || null,
+          location: primaryArea || null,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+        })
         .eq("id", user.id);
 
       setStep(4);
