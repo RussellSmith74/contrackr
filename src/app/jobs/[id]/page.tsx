@@ -327,8 +327,8 @@ export default function JobDetailPage() {
       <div className="min-h-screen bg-[#F8FAFC]">
         <Navbar />
         <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-black text-[#0A1628] mb-2">Job not found</h1>
-          <p className="text-[#6B7280] mb-6">This job may have been removed or the link is incorrect.</p>
+          <h1 className="text-2xl font-black text-[#0A1628] dark:text-white mb-2">Job not found</h1>
+          <p className="text-[#6B7280] dark:text-[#94A3B8] mb-6">This job may have been removed or the link is incorrect.</p>
           <Link href="/feed">
             <Button variant="primary">Back to Feed</Button>
           </Link>
@@ -338,26 +338,26 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
       <Navbar />
 
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Back */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#0A1628] mb-5 transition-colors"
+          className="flex items-center gap-2 text-sm text-[#6B7280] dark:text-[#94A3B8] hover:text-[#0A1628] dark:hover:text-white mb-5 transition-colors"
         >
           <ArrowLeft size={16} />
           Back
         </button>
 
         {/* Job card */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 mb-5">
+        <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 mb-5">
           {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-[#1E6FFF] bg-[#EFF6FF] px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-[#1E6FFF] dark:text-[#60A5FA] bg-[#EFF6FF] dark:bg-[#1E3A5F] px-2.5 py-1 rounded-full">
                   {getCategoryIcon(job.category)} {getCategoryLabel(job.category)}
                 </span>
                 <Badge
@@ -367,49 +367,49 @@ export default function JobDetailPage() {
                   {job.status === "open" ? "Open" : job.status === "in_progress" ? "In Progress" : job.status}
                 </Badge>
               </div>
-              <h1 className="text-2xl font-black text-[#0A1628]">{job.title}</h1>
+              <h1 className="text-2xl font-black text-[#0A1628] dark:text-white">{job.title}</h1>
             </div>
           </div>
 
           {/* Meta */}
-          <div className="flex flex-wrap gap-4 mb-5 pb-5 border-b border-[#F3F4F6]">
-            <div className="flex items-center gap-1.5 text-sm text-[#6B7280]">
+          <div className="flex flex-wrap gap-4 mb-5 pb-5 border-b border-[#F3F4F6] dark:border-[#1E3A5F]">
+            <div className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8]">
               <MapPin size={14} />
               {job.location}
             </div>
             {job.timeline && (
-              <div className="flex items-center gap-1.5 text-sm text-[#6B7280]">
+              <div className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8]">
                 <Clock size={14} />
                 {job.timeline}
               </div>
             )}
             {job.budget_range && (
-              <div className="flex items-center gap-1.5 text-sm text-[#6B7280]">
+              <div className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#94A3B8]">
                 <DollarSign size={14} />
                 {job.budget_range}
               </div>
             )}
-            <span className="text-sm text-[#9CA3AF] ml-auto">
+            <span className="text-sm text-[#9CA3AF] dark:text-[#64748B] ml-auto">
               Posted {formatRelativeTime(job.created_at)}
             </span>
           </div>
 
           {/* Description */}
           <div className="mb-5">
-            <h2 className="text-sm font-bold text-[#0A1628] mb-2">Job Description</h2>
-            <p className="text-sm text-[#4B5563] leading-relaxed whitespace-pre-line">{job.description}</p>
+            <h2 className="text-sm font-bold text-[#0A1628] dark:text-white mb-2">Job Description</h2>
+            <p className="text-sm text-[#4B5563] dark:text-[#CBD5E1] leading-relaxed whitespace-pre-line">{job.description}</p>
           </div>
 
           {/* Photos */}
           {job.photos && job.photos.length > 0 && (
             <div className="mb-5">
-              <h2 className="text-sm font-bold text-[#0A1628] mb-2 flex items-center gap-1.5">
+              <h2 className="text-sm font-bold text-[#0A1628] dark:text-white mb-2 flex items-center gap-1.5">
                 <ImageIcon size={14} />
                 Photos ({job.photos.length})
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {job.photos.map((url, i) => (
-                  <div key={i} className="aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] relative">
+                  <div key={i} className="aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] dark:bg-[#132A4A] relative">
                     <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="200px" />
                   </div>
                 ))}
@@ -419,11 +419,11 @@ export default function JobDetailPage() {
 
           {/* Posted by */}
           {job.customer && (
-            <div className="flex items-center gap-3 pt-4 border-t border-[#F3F4F6]">
+            <div className="flex items-center gap-3 pt-4 border-t border-[#F3F4F6] dark:border-[#1E3A5F]">
               <Avatar src={job.customer.avatar_url} name={job.customer.full_name} size="sm" />
               <div>
-                <p className="text-xs text-[#9CA3AF]">Posted by</p>
-                <p className="text-sm font-semibold text-[#0A1628]">{job.customer.full_name}</p>
+                <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">Posted by</p>
+                <p className="text-sm font-semibold text-[#0A1628] dark:text-white">{job.customer.full_name}</p>
               </div>
               <span className="ml-auto text-sm font-black text-[#1E6FFF]">
                 {job.bid_count} bid{job.bid_count !== 1 ? "s" : ""}
@@ -561,7 +561,7 @@ export default function JobDetailPage() {
 
         {/* Bid section — contractors only */}
         {userRole === "contractor" && (
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6">
             {bidSubmitted || existingBid ? (
               job.status === "completed" && existingBid?.status === "accepted" ? (
                 <div>
@@ -627,16 +627,16 @@ export default function JobDetailPage() {
               )
             ) : !contractorProfileId ? (
               <div className="text-center py-4">
-                <p className="text-sm text-[#6B7280] mb-3">Complete your contractor profile to submit bids.</p>
+                <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mb-3">Complete your contractor profile to submit bids.</p>
                 <Link href="/onboarding/contractor">
                   <Button variant="primary" size="sm">Complete Profile</Button>
                 </Link>
               </div>
             ) : job.status !== "open" ? (
-              <p className="text-sm text-[#9CA3AF] text-center py-2">This job is no longer accepting bids.</p>
+              <p className="text-sm text-[#9CA3AF] dark:text-[#64748B] text-center py-2">This job is no longer accepting bids.</p>
             ) : showBidForm ? (
               <form onSubmit={handleSubmitBid} className="flex flex-col gap-4">
-                <h2 className="font-bold text-[#0A1628]">Submit Your Bid</h2>
+                <h2 className="font-bold text-[#0A1628] dark:text-white">Submit Your Bid</h2>
 
                 <Input
                   label="Your Price"
@@ -689,8 +689,8 @@ export default function JobDetailPage() {
             ) : (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-[#0A1628]">Interested in this job?</p>
-                  <p className="text-sm text-[#6B7280]">{job.bid_count} contractor{job.bid_count !== 1 ? "s have" : " has"} already bid</p>
+                  <p className="font-bold text-[#0A1628] dark:text-white">Interested in this job?</p>
+                  <p className="text-sm text-[#6B7280] dark:text-[#94A3B8]">{job.bid_count} contractor{job.bid_count !== 1 ? "s have" : " has"} already bid</p>
                 </div>
                 <Button variant="primary" onClick={() => setShowBidForm(true)}>
                   Submit Bid
@@ -702,9 +702,9 @@ export default function JobDetailPage() {
 
         {/* Logged-out CTA */}
         {!userRole && (
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center">
-            <p className="font-bold text-[#0A1628] mb-1">Are you a contractor?</p>
-            <p className="text-sm text-[#6B7280] mb-4">Sign up free to submit a bid on this job.</p>
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 text-center">
+            <p className="font-bold text-[#0A1628] dark:text-white mb-1">Are you a contractor?</p>
+            <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mb-4">Sign up free to submit a bid on this job.</p>
             <div className="flex gap-3 justify-center">
               <Link href="/signup"><Button variant="primary">Sign Up Free</Button></Link>
               <Link href="/login"><Button variant="ghost">Log In</Button></Link>

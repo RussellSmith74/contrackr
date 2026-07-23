@@ -146,7 +146,7 @@ function SearchContent() {
     SERVICE_CATEGORIES.find((c) => c.id === id)?.icon || "📋";
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
       <Navbar />
 
       {/* Search header */}
@@ -180,7 +180,7 @@ function SearchContent() {
                 "flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all",
                 !category
                   ? "bg-[#0A1628] text-white border-[#0A1628]"
-                  : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#1E6FFF]"
+                  : "bg-white dark:bg-[#0D1F3C] border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:border-[#1E6FFF]"
               )}
             >
               All Trades
@@ -193,7 +193,7 @@ function SearchContent() {
                   "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border transition-all",
                   category === cat.id
                     ? "bg-[#1E6FFF] text-white border-[#1E6FFF]"
-                    : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#1E6FFF]"
+                    : "bg-white dark:bg-[#0D1F3C] border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:border-[#1E6FFF]"
                 )}
               >
                 {cat.icon} {cat.label}
@@ -234,23 +234,23 @@ function SearchContent() {
 
         {/* Results header */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-[#6B7280]">
+          <p className="text-sm text-[#6B7280] dark:text-[#94A3B8]">
             {loading ? "Loading..." : (
-              <><strong className="text-[#0D0D0D]">{filtered.length}</strong> contractor{filtered.length !== 1 ? "s" : ""} found</>
+              <><strong className="text-[#0D0D0D] dark:text-white">{filtered.length}</strong> contractor{filtered.length !== 1 ? "s" : ""} found</>
             )}
           </p>
           <div className="flex items-center gap-1 text-sm">
-            <span className="text-[#6B7280]">Sort:</span>
+            <span className="text-[#6B7280] dark:text-[#94A3B8]">Sort:</span>
             <button
               onClick={() => setSortBy("rating")}
-              className={cn("font-semibold", sortBy === "rating" ? "text-[#1E6FFF]" : "text-[#6B7280]")}
+              className={cn("font-semibold", sortBy === "rating" ? "text-[#1E6FFF]" : "text-[#6B7280] dark:text-[#94A3B8]")}
             >
               Top Rated
             </button>
             <span className="text-[#E5E7EB] mx-1">·</span>
             <button
               onClick={() => setSortBy("jobs")}
-              className={cn("font-semibold", sortBy === "jobs" ? "text-[#1E6FFF]" : "text-[#6B7280]")}
+              className={cn("font-semibold", sortBy === "jobs" ? "text-[#1E6FFF]" : "text-[#6B7280] dark:text-[#94A3B8]")}
             >
               Most Jobs
             </button>
@@ -261,13 +261,13 @@ function SearchContent() {
         {loading ? (
           <div className="flex flex-col gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 animate-pulse">
+              <div key={i} className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5 animate-pulse">
                 <div className="flex gap-4">
-                  <div className="w-14 h-14 rounded-full bg-[#E5E7EB] flex-shrink-0" />
+                  <div className="w-14 h-14 rounded-full bg-[#E5E7EB] dark:bg-[#1E3A5F] flex-shrink-0" />
                   <div className="flex-1">
-                    <div className="h-4 bg-[#E5E7EB] rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-[#E5E7EB] rounded w-1/4 mb-3" />
-                    <div className="h-3 bg-[#E5E7EB] rounded w-full" />
+                    <div className="h-4 bg-[#E5E7EB] dark:bg-[#1E3A5F] rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-[#E5E7EB] dark:bg-[#1E3A5F] rounded w-1/4 mb-3" />
+                    <div className="h-3 bg-[#E5E7EB] dark:bg-[#1E3A5F] rounded w-full" />
                   </div>
                 </div>
               </div>
@@ -277,13 +277,13 @@ function SearchContent() {
           <div className="text-center py-16">
             {contractors.length === 0 ? (
               <>
-                <p className="text-lg font-bold text-[#0D0D0D]">No contractors yet</p>
-                <p className="text-sm text-[#6B7280] mt-1">Be the first — sign up as a contractor and get found by customers.</p>
+                <p className="text-lg font-bold text-[#0D0D0D] dark:text-white">No contractors yet</p>
+                <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-1">Be the first — sign up as a contractor and get found by customers.</p>
               </>
             ) : (
               <>
-                <p className="text-lg font-bold text-[#0D0D0D]">No contractors found</p>
-                <p className="text-sm text-[#6B7280] mt-1">Try a different category or clear your filters</p>
+                <p className="text-lg font-bold text-[#0D0D0D] dark:text-white">No contractors found</p>
+                <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-1">Try a different category or clear your filters</p>
               </>
             )}
           </div>
@@ -291,7 +291,7 @@ function SearchContent() {
           <div className="flex flex-col gap-4">
             {filtered.map((contractor, index) => (
               <Link key={contractor.id} href={`/contractors/${contractor.id}`}>
-                <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 hover:shadow-md hover:border-[#1E6FFF] transition-all cursor-pointer">
+                <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5 hover:shadow-md hover:border-[#1E6FFF] transition-all cursor-pointer">
                   <div className="flex items-start gap-4">
                     <div className="relative flex-shrink-0">
                       <Avatar src={contractor.avatar_url} name={contractor.business_name} size="lg" />
@@ -304,7 +304,7 @@ function SearchContent() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 mb-1 flex-wrap">
-                        <h3 className="font-black text-[#0A1628]">{contractor.business_name}</h3>
+                        <h3 className="font-black text-[#0A1628] dark:text-white">{contractor.business_name}</h3>
                         {contractor.is_verified && (
                           <Badge variant="blue" size="sm">
                             <CheckCircle size={10} className="mr-1" />
@@ -324,7 +324,7 @@ function SearchContent() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-[#6B7280] mb-2">{contractor.owner_name}</p>
+                      <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mb-2">{contractor.owner_name}</p>
 
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
                         {contractor.avg_rating > 0 && (
@@ -336,13 +336,13 @@ function SearchContent() {
                           />
                         )}
                         {contractor.total_jobs_completed > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-[#6B7280]">
+                          <div className="flex items-center gap-1 text-xs text-[#6B7280] dark:text-[#94A3B8]">
                             <Briefcase size={11} />
                             {contractor.total_jobs_completed} jobs
                           </div>
                         )}
                         {contractor.location && (
-                          <div className="flex items-center gap-1 text-xs text-[#6B7280]">
+                          <div className="flex items-center gap-1 text-xs text-[#6B7280] dark:text-[#94A3B8]">
                             <MapPin size={11} />
                             {contractor.location}
                           </div>
@@ -350,7 +350,7 @@ function SearchContent() {
                       </div>
 
                       {contractor.bio && (
-                        <p className="text-sm text-[#6B7280] leading-snug line-clamp-2 mb-3">
+                        <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] leading-snug line-clamp-2 mb-3">
                           {contractor.bio}
                         </p>
                       )}
@@ -360,7 +360,7 @@ function SearchContent() {
                           {contractor.categories.map((cat) => (
                             <span
                               key={cat}
-                              className="text-xs font-semibold bg-[#F3F4F6] text-[#374151] px-2 py-0.5 rounded-full"
+                              className="text-xs font-semibold bg-[#F3F4F6] dark:bg-[#1E3A5F] text-[#374151] dark:text-[#CBD5E1] px-2 py-0.5 rounded-full"
                             >
                               {getCategoryIcon(cat)} {getCategoryLabel(cat)}
                             </span>

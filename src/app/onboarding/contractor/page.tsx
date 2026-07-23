@@ -250,33 +250,33 @@ export default function ContractorOnboarding() {
 
   if (step === 4) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] flex items-center justify-center px-4">
         <div className="max-w-lg w-full text-center">
-          <div className="w-20 h-20 bg-[#ECFDF5] rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-[#ECFDF5] dark:bg-[#064E3B]/40 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} className="text-[#059669]" />
           </div>
-          <h1 className="text-3xl font-black text-[#0A1628] mb-3">
+          <h1 className="text-3xl font-black text-[#0A1628] dark:text-white mb-3">
             Your profile is live!
           </h1>
-          <p className="text-[#6B7280] mb-2">
+          <p className="text-[#6B7280] dark:text-[#94A3B8] mb-2">
             Customers in your area can now find and contact you on Contrakr.
           </p>
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 mb-6 text-left">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-5 mb-6 text-left">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold text-[#0D0D0D]">
+              <span className="text-sm font-bold text-[#0D0D0D] dark:text-white">
                 Profile Completeness
               </span>
               <span className="text-sm font-black text-[#1E6FFF]">
                 {completeness()}%
               </span>
             </div>
-            <div className="w-full bg-[#E5E7EB] rounded-full h-2.5 mb-3">
+            <div className="w-full bg-[#E5E7EB] dark:bg-[#1E3A5F] rounded-full h-2.5 mb-3">
               <div
                 className="bg-[#1E6FFF] h-2.5 rounded-full transition-all"
                 style={{ width: `${completeness()}%` }}
               />
             </div>
-            <p className="text-xs text-[#6B7280]">
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
               A complete profile with photos gets 3× more responses. You can
               finish it anytime from your dashboard.
             </p>
@@ -306,24 +306,24 @@ export default function ContractorOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
       {/* Header */}
-      <div className="bg-white border-b border-[#E5E7EB] px-4 py-4">
+      <div className="bg-white dark:bg-[#0D1F3C] border-b border-[#E5E7EB] dark:border-[#1E3A5F] px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#1E6FFF] rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-xs">C</span>
             </div>
-            <span className="font-black text-[#0A1628] text-lg">Contrakr</span>
+            <span className="font-black text-[#0A1628] dark:text-white text-lg">Contrakr</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-[#6B7280]">
+            <span className="text-sm text-[#6B7280] dark:text-[#94A3B8]">
               Step {step} of {STEPS.length - 1}
             </span>
             <button
               type="button"
               onClick={handleExit}
-              className="flex items-center gap-1.5 text-sm font-semibold text-[#6B7280] hover:text-[#0A1628] hover:bg-[#F3F4F6] px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-[#6B7280] dark:text-[#94A3B8] hover:text-[#0A1628] dark:hover:text-white hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] px-3 py-1.5 rounded-lg transition-colors"
               title={existingProfileId ? "Discard changes and go back" : "Finish this later"}
             >
               <X size={15} />
@@ -334,7 +334,7 @@ export default function ContractorOnboarding() {
       </div>
 
       {/* Progress */}
-      <div className="bg-white border-b border-[#E5E7EB] px-4 py-3">
+      <div className="bg-white dark:bg-[#0D1F3C] border-b border-[#E5E7EB] dark:border-[#1E3A5F] px-4 py-3">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-2">
             {STEPS.slice(0, -1).map((s, i) => (
@@ -346,7 +346,7 @@ export default function ContractorOnboarding() {
                       ? "bg-[#059669] text-white"
                       : step === s.id
                       ? "bg-[#1E6FFF] text-white"
-                      : "bg-[#E5E7EB] text-[#9CA3AF]"
+                      : "bg-[#E5E7EB] dark:bg-[#1E3A5F] text-[#9CA3AF] dark:text-[#64748B]"
                   )}
                 >
                   {step > s.id ? <CheckCircle size={14} /> : s.id}
@@ -354,7 +354,7 @@ export default function ContractorOnboarding() {
                 <span
                   className={cn(
                     "text-xs font-semibold hidden sm:block",
-                    step >= s.id ? "text-[#0D0D0D]" : "text-[#9CA3AF]"
+                    step >= s.id ? "text-[#0D0D0D] dark:text-white" : "text-[#9CA3AF] dark:text-[#64748B]"
                   )}
                 >
                   {s.label}
@@ -363,7 +363,7 @@ export default function ContractorOnboarding() {
                   <div
                     className={cn(
                       "h-0.5 flex-1",
-                      step > s.id ? "bg-[#059669]" : "bg-[#E5E7EB]"
+                      step > s.id ? "bg-[#059669]" : "bg-[#E5E7EB] dark:bg-[#1E3A5F]"
                     )}
                   />
                 )}
@@ -377,15 +377,15 @@ export default function ContractorOnboarding() {
         {step === 1 && (
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-2xl font-black text-[#0A1628]">
+              <h2 className="text-2xl font-black text-[#0A1628] dark:text-white">
                 Tell us about your business
               </h2>
-              <p className="text-[#6B7280] mt-1 text-sm">
+              <p className="text-[#6B7280] dark:text-[#94A3B8] mt-1 text-sm">
                 This is how customers will find and contact you.
               </p>
             </div>
 
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-5">
+            <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 flex flex-col gap-5">
               {/* Profile photo */}
               <div className="flex flex-col items-center gap-2">
                 <div className="relative">
@@ -405,7 +405,7 @@ export default function ContractorOnboarding() {
                   </button>
                   <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
                 </div>
-                <p className="text-xs text-[#9CA3AF]">{uploadingAvatar ? "Uploading..." : "Add a profile photo"}</p>
+                <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{uploadingAvatar ? "Uploading..." : "Add a profile photo"}</p>
               </div>
 
               <Input
@@ -465,10 +465,10 @@ export default function ContractorOnboarding() {
                   className="w-5 h-5 rounded border-[#D1D5DB] text-[#1E6FFF] focus:ring-[#1E6FFF]"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[#0D0D0D]">
+                  <p className="text-sm font-semibold text-[#0D0D0D] dark:text-white">
                     I am insured
                   </p>
-                  <p className="text-xs text-[#6B7280]">
+                  <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
                     Insured contractors get a badge on their profile — customers
                     look for this
                   </p>
@@ -491,27 +491,27 @@ export default function ContractorOnboarding() {
         {step === 2 && (
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-2xl font-black text-[#0A1628]">
+              <h2 className="text-2xl font-black text-[#0A1628] dark:text-white">
                 What do you do?
               </h2>
-              <p className="text-[#6B7280] mt-1 text-sm">
+              <p className="text-[#6B7280] dark:text-[#94A3B8] mt-1 text-sm">
                 Type your trades or services and press Enter after each one. Add as many as you want.
               </p>
             </div>
 
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-5">
+            <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 flex flex-col gap-5">
               <div>
-                <label className="text-sm font-semibold text-[#0D0D0D] block mb-2">
+                <label className="text-sm font-semibold text-[#0D0D0D] dark:text-white block mb-2">
                   Your Services & Trades
                 </label>
                 <div
-                  className="min-h-[80px] w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2.5 flex flex-wrap gap-2 cursor-text focus-within:border-[#1E6FFF] focus-within:ring-1 focus-within:ring-[#1E6FFF] transition-all"
+                  className="min-h-[80px] w-full rounded-xl border border-[#E5E7EB] dark:border-[#1E3A5F] bg-white dark:bg-[#0A1628] px-3 py-2.5 flex flex-wrap gap-2 cursor-text focus-within:border-[#1E6FFF] focus-within:ring-1 focus-within:ring-[#1E6FFF] transition-all"
                   onClick={() => categoryInputRef.current?.focus()}
                 >
                   {form.categories.map((cat) => (
                     <span
                       key={cat}
-                      className="flex items-center gap-1.5 text-sm font-semibold bg-[#EFF6FF] text-[#1E6FFF] px-3 py-1 rounded-full"
+                      className="flex items-center gap-1.5 text-sm font-semibold bg-[#EFF6FF] dark:bg-[#1E3A5F] text-[#1E6FFF] dark:text-[#60A5FA] px-3 py-1 rounded-full"
                     >
                       {cat}
                       <button
@@ -531,21 +531,21 @@ export default function ContractorOnboarding() {
                     onKeyDown={handleCategoryKeyDown}
                     onBlur={() => { if (categoryInput.trim()) addCategory(categoryInput); }}
                     placeholder={form.categories.length === 0 ? "e.g. Landscaping, Gutter Cleaning, Tree Trimming..." : "Add another..."}
-                    className="flex-1 min-w-[160px] text-sm outline-none bg-transparent placeholder:text-[#9CA3AF]"
+                    className="flex-1 min-w-[160px] text-sm outline-none bg-transparent text-[#0D0D0D] dark:text-white placeholder:text-[#9CA3AF] dark:placeholder:text-[#64748B]"
                   />
                 </div>
-                <p className="text-xs text-[#9CA3AF] mt-1.5">Press Enter or comma after each service</p>
+                <p className="text-xs text-[#9CA3AF] dark:text-[#64748B] mt-1.5">Press Enter or comma after each service</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <p className="text-xs text-[#6B7280] w-full mb-1 font-semibold">Common trades — click to add:</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] w-full mb-1 font-semibold">Common trades — click to add:</p>
                 {["Landscaping","Roofing","Plumbing","HVAC","Electrical","Painting","Concrete & Flatwork","Carpentry & Woodwork","Pressure Washing","Gutter Cleaning","Tree Trimming","Flooring","Drywall & Plastering","Fencing","Land Clearing","Welding & Fabrication","Hauling & Junk Removal","Mobile Mechanic","Auto Detailing","Handyman Services","Insulation","Masonry & Stonework","Pool & Spa Services","Septic & Drain Field","Solar & Generators","Security Systems & Cameras","Irrigation & Sprinklers","Moving & Labor Help","Towing","Equipment Operator","Trucking & Heavy Hauling","Cleaning Services","Window & Door Install","Kitchen & Bath Remodel","Tile Work","Framing"].map((s) => (
                   !form.categories.includes(s) && (
                     <button
                       key={s}
                       type="button"
                       onClick={() => addCategory(s)}
-                      className="text-xs px-3 py-1 rounded-full border border-[#E5E7EB] text-[#6B7280] hover:border-[#1E6FFF] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] transition-all"
+                      className="text-xs px-3 py-1 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:border-[#1E6FFF] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] transition-all"
                     >
                       + {s}
                     </button>
@@ -563,7 +563,7 @@ export default function ContractorOnboarding() {
                   if (coords) setLocationCoords(coords);
                 }}
               />
-              <p className="text-xs text-[#6B7280] -mt-3">Your main service location — used to match you with nearby jobs</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] -mt-3">Your main service location — used to match you with nearby jobs</p>
             </div>
 
             <div className="flex gap-3">
@@ -586,15 +586,15 @@ export default function ContractorOnboarding() {
         {step === 3 && (
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-2xl font-black text-[#0A1628]">
+              <h2 className="text-2xl font-black text-[#0A1628] dark:text-white">
                 About your business
               </h2>
-              <p className="text-[#6B7280] mt-1 text-sm">
+              <p className="text-[#6B7280] dark:text-[#94A3B8] mt-1 text-sm">
                 Tell customers what makes you the right person for the job.
               </p>
             </div>
 
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
+            <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6">
               <Textarea
                 name="bio"
                 label="About Your Business"

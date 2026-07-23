@@ -168,7 +168,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
         <Navbar />
         <div className="flex items-center justify-center py-32">
           <Loader2 size={28} className="animate-spin text-[#1E6FFF]" />
@@ -180,18 +180,18 @@ export default function SettingsPage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
       <Navbar />
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-[#0A1628]">Account Settings</h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">Manage your profile and account info</p>
+          <h1 className="text-2xl font-black text-[#0A1628] dark:text-white">Account Settings</h1>
+          <p className="text-sm text-[#6B7280] dark:text-[#94A3B8] mt-0.5">Manage your profile and account info</p>
         </div>
 
         {/* Avatar section */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 mb-5">
-          <h2 className="font-bold text-[#0A1628] mb-4">Profile Photo</h2>
+        <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 mb-5">
+          <h2 className="font-bold text-[#0A1628] dark:text-white mb-4">Profile Photo</h2>
           <div className="flex items-center gap-5">
             <div className="relative">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-[#0A1628] flex items-center justify-center flex-shrink-0">
@@ -228,8 +228,8 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#0D0D0D]">{profile.full_name}</p>
-              <p className="text-xs text-[#6B7280] capitalize mb-2">{profile.role}</p>
+              <p className="text-sm font-semibold text-[#0D0D0D] dark:text-white">{profile.full_name}</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] capitalize mb-2">{profile.role}</p>
               <button
                 onClick={handleAvatarClick}
                 disabled={uploadingAvatar}
@@ -244,8 +244,8 @@ export default function SettingsPage() {
 
         {/* Profile info */}
         <form onSubmit={handleSave}>
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex flex-col gap-5 mb-5">
-            <h2 className="font-bold text-[#0A1628]">Personal Info</h2>
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 flex flex-col gap-5 mb-5">
+            <h2 className="font-bold text-[#0A1628] dark:text-white">Personal Info</h2>
 
             <Input
               label="Full Name"
@@ -255,12 +255,12 @@ export default function SettingsPage() {
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-[#0D0D0D]">Email Address</label>
+              <label className="text-sm font-semibold text-[#0D0D0D] dark:text-white">Email Address</label>
               <input
                 type="email"
                 value={profile.email}
                 disabled
-                className="w-full rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm text-[#9CA3AF] cursor-not-allowed"
+                className="w-full rounded-lg border border-[#E5E7EB] dark:border-[#1E3A5F] bg-[#F9FAFB] dark:bg-[#0A1628] px-4 py-3 text-sm text-[#9CA3AF] dark:text-[#64748B] cursor-not-allowed"
               />
               <p className="text-xs text-[#9CA3AF]">Email cannot be changed here</p>
             </div>
@@ -318,12 +318,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Appearance */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 flex items-center justify-between mb-5">
+          <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl p-6 flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               {dark ? <Moon size={20} className="text-[#1E6FFF]" /> : <Sun size={20} className="text-[#F59E0B]" />}
               <div>
-                <p className="text-sm font-bold text-[#0D0D0D]">Dark Mode</p>
-                <p className="text-xs text-[#6B7280]">{dark ? "On — looking sharp" : "Off — switch for a darker look"}</p>
+                <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">Dark Mode</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">{dark ? "On — looking sharp" : "Off — switch for a darker look"}</p>
               </div>
             </div>
             <button
