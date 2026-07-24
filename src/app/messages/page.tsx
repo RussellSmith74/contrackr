@@ -195,6 +195,15 @@ function MessagesInner() {
         .eq("chat_id", chat.id)
         .order("created_at", { ascending: true });
       if (data) setMessages(data);
+      // Mark the other person's messages as read.
+      if (myId) {
+        await supabase
+          .from("direct_messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("chat_id", chat.id)
+          .neq("sender_id", myId)
+          .is("read_at", null);
+      }
     } else {
       const { data } = await supabase
         .from("messages")
@@ -202,8 +211,16 @@ function MessagesInner() {
         .eq("conversation_id", chat.id)
         .order("created_at", { ascending: true });
       if (data) setMessages(data);
+      if (myId) {
+        await supabase
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("conversation_id", chat.id)
+          .neq("sender_id", myId)
+          .is("read_at", null);
+      }
     }
-  }, []);
+  }, [myId]);
 
   // Poll when a chat is active
   useEffect(() => {

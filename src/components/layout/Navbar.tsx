@@ -90,19 +90,37 @@ export default function Navbar() {
             : `customer_id.eq.${user.id}`
         );
 
-      if (!convs || convs.length === 0) { setUnreadMessages(0); return; }
+      // Unread in job conversations
+      let jobUnread = 0;
+      if (convs && convs.length > 0) {
+        const convIds = convs.map((c: { id: string }) => c.id);
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .in("conversation_id", convIds)
+          .neq("sender_id", user.id)
+          .is("read_at", null);
+        jobUnread = count ?? 0;
+      }
 
-      const convIds = convs.map((c: { id: string }) => c.id);
+      // Unread in direct chats
+      let directUnread = 0;
+      const { data: chats } = await supabase
+        .from("direct_chats")
+        .select("id")
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
+      if (chats && chats.length > 0) {
+        const chatIds = chats.map((c: { id: string }) => c.id);
+        const { count } = await supabase
+          .from("direct_messages")
+          .select("id", { count: "exact", head: true })
+          .in("chat_id", chatIds)
+          .neq("sender_id", user.id)
+          .is("read_at", null);
+        directUnread = count ?? 0;
+      }
 
-      // Count messages sent by others that are unread (no read_at)
-      const { count } = await supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .in("conversation_id", convIds)
-        .neq("sender_id", user.id)
-        .is("read_at", null);
-
-      setUnreadMessages(count ?? 0);
+      setUnreadMessages(jobUnread + directUnread);
     };
 
     checkUnread();
