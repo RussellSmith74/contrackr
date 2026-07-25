@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Camera, Send } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Button from "@/components/ui/Button";
@@ -17,12 +17,18 @@ const POST_TYPES = [
   { id: "update",        label: "Business Update", desc: "Share news or updates", emoji: "📢" },
 ];
 
-export default function ComposePage() {
+function ComposeForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // The feed composer's Photo / Offer / Update buttons link here with ?type=,
+  // so the right kind of post is already selected on arrival.
+  const requestedType = searchParams.get("type");
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [postType, setPostType] = useState("work_showcase");
+  const [postType, setPostType] = useState(
+    POST_TYPES.some((t) => t.id === requestedType) ? requestedType! : "work_showcase"
+  );
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -195,5 +201,13 @@ export default function ComposePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ComposePage() {
+  return (
+    <Suspense>
+      <ComposeForm />
+    </Suspense>
   );
 }

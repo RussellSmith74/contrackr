@@ -27,6 +27,7 @@ import Button from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import { Avatar } from "@/components/ui/Avatar";
+import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -97,6 +98,8 @@ export default function ContractorProfilePage() {
   const [messaging, setMessaging] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Shared by the Posts and Photos tabs — whichever set was clicked.
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
   const handleShare = async () => {
     try {
@@ -425,43 +428,52 @@ export default function ContractorProfilePage() {
                   </div>
                 ) : (
                   posts.map((post) => (
-                    <Link key={post.id} href={`/post/${post.id}?s=feed_post`}>
-                      <div className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl overflow-hidden hover:border-[#1E6FFF]/50 transition-colors">
-                        <div className="p-5 pb-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Avatar src={avatar} name={c.business_name} size="sm" />
-                            <div>
-                              <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">{c.business_name}</p>
-                              <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{formatDate(post.created_at)}</p>
-                            </div>
+                    <div
+                      key={post.id}
+                      className="bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl overflow-hidden hover:border-[#1E6FFF]/50 transition-colors"
+                    >
+                      <Link href={`/post/${post.id}?s=feed_post`} className="block p-5 pb-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <Avatar src={avatar} name={c.business_name} size="sm" />
+                          <div>
+                            <p className="text-sm font-bold text-[#0D0D0D] dark:text-white">{c.business_name}</p>
+                            <p className="text-xs text-[#9CA3AF] dark:text-[#64748B]">{formatDate(post.created_at)}</p>
                           </div>
-                          <p className="text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">{post.content}</p>
                         </div>
+                        <p className="text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">{post.content}</p>
+                      </Link>
 
-                        {post.photos && post.photos.length > 0 && (
-                          <div className={`grid gap-0.5 bg-[#0A1628] ${post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                            {post.photos.slice(0, 4).map((url, i) => (
-                              <div key={i} className={`relative bg-[#F1F5F9] dark:bg-[#132A4A] ${post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                                {i === 3 && post.photos.length > 4 && (
-                                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                    <span className="text-white font-black text-xl">+{post.photos.length - 4}</span>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      {post.photos && post.photos.length > 0 && (
+                        <div className={`grid gap-0.5 bg-[#0A1628] ${post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                          {post.photos.slice(0, 4).map((url, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setLightbox({ photos: post.photos, index: i })}
+                              className={`relative bg-[#F1F5F9] dark:bg-[#132A4A] cursor-zoom-in ${post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                              {i === 3 && post.photos.length > 4 && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                  <span className="text-white font-black text-xl">+{post.photos.length - 4}</span>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
-                        {(post.likes_count > 0 || post.comments_count > 0) && (
-                          <div className="px-5 py-2.5 flex items-center gap-3 text-xs text-[#9CA3AF] dark:text-[#64748B] border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
-                            {post.likes_count > 0 && <span>{post.likes_count} like{post.likes_count !== 1 ? "s" : ""}</span>}
-                            {post.comments_count > 0 && <span>{post.comments_count} comment{post.comments_count !== 1 ? "s" : ""}</span>}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
+                      {(post.likes_count > 0 || post.comments_count > 0) && (
+                        <Link
+                          href={`/post/${post.id}?s=feed_post`}
+                          className="px-5 py-2.5 flex items-center gap-3 text-xs text-[#9CA3AF] dark:text-[#64748B] border-t border-[#F1F5F9] dark:border-[#1E3A5F]"
+                        >
+                          {post.likes_count > 0 && <span>{post.likes_count} like{post.likes_count !== 1 ? "s" : ""}</span>}
+                          {post.comments_count > 0 && <span>{post.comments_count} comment{post.comments_count !== 1 ? "s" : ""}</span>}
+                        </Link>
+                      )}
+                    </div>
                   ))
                 )}
               </div>
@@ -477,8 +489,13 @@ export default function ContractorProfilePage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {photos.map((photo) => (
-                      <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] dark:bg-[#1E3A5F] group">
+                    {photos.map((photo, i) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        onClick={() => setLightbox({ photos: photos.map((p) => p.photo_url), index: i })}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] dark:bg-[#1E3A5F] group cursor-zoom-in"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={photo.photo_url}
@@ -490,7 +507,7 @@ export default function ContractorProfilePage() {
                             <p className="text-xs text-white truncate">{photo.caption}</p>
                           </div>
                         )}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -617,6 +634,13 @@ export default function ContractorProfilePage() {
           </div>
         </div>
       </div>
+
+      <PhotoLightbox
+        photos={lightbox?.photos ?? []}
+        index={lightbox?.index ?? null}
+        onClose={() => setLightbox(null)}
+        onIndexChange={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
+      />
     </div>
   );
 }

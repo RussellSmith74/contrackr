@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
+import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -201,15 +202,15 @@ export default function FeedPage() {
                 <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#F1F5F9] dark:border-[#1E3A5F]">
                   {currentUserRole === "contractor" ? (
                     <>
-                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#059669] dark:text-[#34D399] hover:bg-[#ECFDF5] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                      <Link href="/compose?type=work_showcase" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#059669] dark:text-[#34D399] hover:bg-[#ECFDF5] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
                         <Camera size={18} />
                         Photo
                       </Link>
-                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#D97706] dark:text-[#FCD34D] hover:bg-[#FFFBEB] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                      <Link href="/compose?type=promotion" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#D97706] dark:text-[#FCD34D] hover:bg-[#FFFBEB] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
                         <Tag size={18} />
                         Offer
                       </Link>
-                      <Link href="/compose" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#1E6FFF] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
+                      <Link href="/compose?type=update" className="flex-1 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[#1E6FFF] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] px-3 py-2 rounded-xl transition-colors">
                         <Megaphone size={18} />
                         Update
                       </Link>
@@ -455,6 +456,7 @@ function FeedCard({
   const [likePending, setLikePending] = useState(false);
   const [pop, setPop] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFeedPost = post.source === "feed_post";
@@ -741,22 +743,38 @@ function FeedCard({
         )}
       </div>
 
-      {/* Photos — full-bleed, edge to edge */}
+      {/* Photos — full-bleed, edge to edge. Click opens the lightbox rather
+          than navigating away from the feed. */}
       {post.photos && post.photos.length > 0 && (
-        <Link href={`/post/${post.id}?s=${post.source}`}>
+        <>
           <div className={cn("grid gap-0.5 bg-[#0A1628]", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {post.photos.slice(0, 4).map((url, i) => (
-              <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#132A4A]", post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square")}>
+              <button
+                key={i}
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                className={cn(
+                  "relative bg-[#F1F5F9] dark:bg-[#132A4A] group/photo cursor-zoom-in",
+                  post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square"
+                )}
+              >
                 <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
+                <span className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/10 transition-colors" />
                 {i === 3 && post.photos.length > 4 && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="text-white font-black text-xl">+{post.photos.length - 4}</span>
                   </div>
                 )}
-              </div>
+              </button>
             ))}
           </div>
-        </Link>
+          <PhotoLightbox
+            photos={post.photos}
+            index={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+            onIndexChange={setLightboxIndex}
+          />
+        </>
       )}
 
       {/* Like / comment counts always visible */}

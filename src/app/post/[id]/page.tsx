@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
+import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -58,6 +59,7 @@ export default function PostPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -421,13 +423,26 @@ export default function PostPage() {
 
           {/* Photos — full-bleed, edge to edge */}
           {post.photos.length > 0 && (
-            <div className={cn("grid gap-0.5 bg-[#0A1628]", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-              {post.photos.map((url, i) => (
-                <div key={i} className={cn("relative bg-[#F1F5F9] dark:bg-[#132A4A]", post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square")}>
-                  <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className={cn("grid gap-0.5 bg-[#0A1628]", post.photos.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                {post.photos.map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLightboxIndex(i)}
+                    className={cn("relative bg-[#F1F5F9] dark:bg-[#132A4A] cursor-zoom-in", post.photos.length === 1 ? "aspect-[16/10]" : "aspect-square")}
+                  >
+                    <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="600px" />
+                  </button>
+                ))}
+              </div>
+              <PhotoLightbox
+                photos={post.photos}
+                index={lightboxIndex}
+                onClose={() => setLightboxIndex(null)}
+                onIndexChange={setLightboxIndex}
+              />
+            </>
           )}
 
           {/* Like count */}
