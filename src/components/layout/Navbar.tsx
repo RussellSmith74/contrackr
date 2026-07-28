@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, MessageSquare, Search } from "lucide-react";
+import { Menu, X, MessageSquare, Search, Shield } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ interface UserProfile {
   full_name: string;
   avatar_url?: string;
   role: "customer" | "contractor";
+  is_admin?: boolean;
 }
 
 export default function Navbar() {
@@ -36,7 +37,7 @@ export default function Navbar() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url, role")
+        .select("id, full_name, avatar_url, role, is_admin")
         .eq("id", authUser.id)
         .single();
 
@@ -263,6 +264,16 @@ export default function Navbar() {
                       >
                         Settings
                       </Link>
+                      {user.is_admin && (
+                        <Link
+                          href="/admin/reports"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#1E6FFF] hover:bg-[#EFF6FF]"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          <Shield size={14} />
+                          Moderation
+                        </Link>
+                      )}
                       <button
                         onClick={handleSignOut}
                         className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-[#FEF2F2]"

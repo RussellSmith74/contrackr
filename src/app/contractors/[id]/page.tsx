@@ -27,6 +27,7 @@ import Button from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import { Avatar } from "@/components/ui/Avatar";
+import { UserActions } from "@/components/ui/UserActions";
 import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -287,6 +288,11 @@ export default function ContractorProfilePage() {
                     </Link>
                   </>
                 )}
+                <UserActions
+                  targetUserId={c.user_id}
+                  targetName={c.owner_name || c.business_name}
+                  currentUserId={currentUserId}
+                />
               </div>
             </div>
 

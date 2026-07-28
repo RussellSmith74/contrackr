@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone, Award } from "lucide-react";
+import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone, Award, Flag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
 import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
+import { ReportModal } from "@/components/ui/ReportModal";
+import { fetchBlockedIds } from "@/lib/moderation";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,7 @@ export default function FeedPage() {
   const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<"customer" | "contractor" | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [searchRadius, setSearchRadius] = useState<number>(50);
@@ -77,6 +80,7 @@ export default function FeedPage() {
         setUserLng(lng);
         setSearchRadius(radius);
       }
+      setBlockedIds(await fetchBlockedIds(supabase, user.id));
     }
 
     // Job posts
@@ -159,6 +163,7 @@ export default function FeedPage() {
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const filtered = posts.filter((post) => {
+    if (blockedIds.has(post.author_id)) return false;
     if (activeFilter === "Job Requests" && post.type !== "job_request") return false;
     if (activeFilter === "Contractor Posts" && post.type === "job_request") return false;
     // Radius filter — only apply when user has a geocoded location AND post has coords
@@ -457,6 +462,7 @@ function FeedCard({
   const [pop, setPop] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [reporting, setReporting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFeedPost = post.source === "feed_post";
@@ -642,6 +648,15 @@ function FeedCard({
                 <span className={cn("text-[10px] font-semibold px-2 py-1 rounded-md tracking-wide whitespace-nowrap", type.light, type.dark)}>
                   {type.label}
                 </span>
+                {currentUserId && currentUserId !== post.author_id && (
+                  <button
+                    onClick={() => setReporting(true)}
+                    className="p-1.5 text-[#CBD5E1] dark:text-[#4B6A8A] hover:text-[#DC2626] hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
+                    title="Report post"
+                  >
+                    <Flag size={14} />
+                  </button>
+                )}
                 {(currentUserId === post.author_id || isAdmin) && (
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
@@ -665,6 +680,14 @@ function FeedCard({
             </div>
           </div>
         </div>
+
+        <ReportModal
+          open={reporting}
+          onClose={() => setReporting(false)}
+          targetType={post.source}
+          targetId={post.id}
+          targetLabel={post.title}
+        />
 
         {/* Title */}
         {editing && post.source === "job_post" ? (

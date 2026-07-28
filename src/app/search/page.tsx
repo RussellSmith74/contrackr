@@ -12,6 +12,7 @@ import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { distanceMiles } from "@/lib/geo";
+import { fetchBlockedIds } from "@/lib/moderation";
 
 interface Contractor {
   id: string;
@@ -92,9 +93,11 @@ function SearchContent() {
         `)
         .order("avg_rating", { ascending: false });
 
+      const blocked = await fetchBlockedIds(supabase, user?.id ?? null);
+
       if (data) {
         setContractors(
-          data.map((c) => {
+          data.filter((c) => !blocked.has(c.user_id)).map((c) => {
             const profile = c.profiles as unknown as { avatar_url: string | null; location: string | null } | null;
             const cAny = c as { lat?: number | null; lng?: number | null };
             return {

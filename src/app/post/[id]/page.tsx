@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Award } from "lucide-react";
+import { ArrowLeft, ThumbsUp, Send, MapPin, Clock, DollarSign, Briefcase, MessageSquare, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Award, Flag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
 import { PhotoLightbox } from "@/components/ui/PhotoLightbox";
+import { ReportModal } from "@/components/ui/ReportModal";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -60,6 +61,7 @@ export default function PostPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [reporting, setReporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -346,6 +348,15 @@ export default function PostPage() {
                       )}
                     </div>
                   </div>
+                  {myId && myId !== post.author_id && !editing && (
+                    <button
+                      onClick={() => setReporting(true)}
+                      className="p-1.5 text-[#CBD5E1] dark:text-[#4B6A8A] hover:text-[#DC2626] hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
+                      title="Report post"
+                    >
+                      <Flag size={14} />
+                    </button>
+                  )}
                   {canEdit && !editing && (
                     <div className="flex gap-0.5 flex-shrink-0">
                       <button onClick={() => setEditing(true)} className="p-1.5 text-[#CBD5E1] hover:text-[#1E6FFF] hover:bg-[#EFF6FF] dark:hover:bg-[#1E3A5F] rounded-lg transition-colors">
@@ -359,6 +370,14 @@ export default function PostPage() {
                 </div>
               </div>
             </div>
+
+            <ReportModal
+              open={reporting}
+              onClose={() => setReporting(false)}
+              targetType={post.source}
+              targetId={post.id}
+              targetLabel={post.title}
+            />
 
             {/* Title */}
             {editing && post.source === "job_post" ? (

@@ -7,6 +7,7 @@ import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Button from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
+import { UserActions } from "@/components/ui/UserActions";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -215,6 +216,11 @@ export default function ProfilePage() {
                     <Button variant="outline" size="md">Edit Profile</Button>
                   </Link>
                 )}
+                <UserActions
+                  targetUserId={profile.id}
+                  targetName={profile.full_name}
+                  currentUserId={currentUserId}
+                />
               </div>
             </div>
 

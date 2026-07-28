@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { fetchBlockedIds } from "@/lib/moderation";
 
 interface ChatItem {
   id: string;
@@ -134,11 +135,15 @@ function MessagesInner() {
       };
     });
 
-    return [...directItems, ...jobItems].sort((a, b) => {
-      const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-      const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-      return tb - ta;
-    });
+    const blocked = await fetchBlockedIds(supabase, userId);
+
+    return [...directItems, ...jobItems]
+      .filter((c) => !blocked.has(c.other_id))
+      .sort((a, b) => {
+        const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return tb - ta;
+      });
   }, []);
 
   const findOrCreateDirectChat = useCallback(async (userId: string, otherId: string): Promise<string | null> => {
