@@ -308,7 +308,7 @@ export default function ContractorOnboarding() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] transition-colors">
       {/* Header */}
-      <div className="bg-white dark:bg-[#0D1F3C] border-b border-[#E5E7EB] dark:border-[#1E3A5F] px-4 py-4">
+      <div className="bg-white dark:bg-[#0D1F3C] border-b border-[#E5E7EB] dark:border-[#1E3A5F] px-4 py-4 pt-[calc(1rem+env(safe-area-inset-top))]">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#1E6FFF] rounded-lg flex items-center justify-center">

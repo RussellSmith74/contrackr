@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,6 +30,18 @@ export const metadata: Metadata = {
     description: "The professional marketplace for the blue collar workforce.",
     images: ["/icon.png"],
   },
+  appleWebApp: {
+    capable: true,
+    title: "Contrakr",
+    // Lets the navy header run under the iOS status bar once installed.
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A1628",
+  // Keeps content clear of the notch and home indicator in standalone mode.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -46,6 +60,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {children}
+        <ServiceWorkerRegistrar />
+        <InstallPrompt />
       </body>
     </html>
   );

@@ -113,7 +113,7 @@ export default function CustomerOnboarding() {
 
   if (step === "welcome") {
     return (
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg pt-[env(safe-area-inset-top)]">
         <div className="text-center mb-8">
           <div className="relative w-20 h-20 mx-auto mb-5">
             <div className="w-20 h-20 rounded-full bg-[#0A1628] flex items-center justify-center overflow-hidden">
@@ -170,7 +170,7 @@ export default function CustomerOnboarding() {
 
   if (step === "done") {
     return (
-      <div className="w-full max-w-lg text-center">
+      <div className="w-full max-w-lg text-center pt-[env(safe-area-inset-top)]">
         <div className="w-20 h-20 bg-[#ECFDF5] rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle size={40} className="text-[#059669]" />
         </div>
@@ -197,7 +197,7 @@ export default function CustomerOnboarding() {
   }
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="w-full max-w-2xl pt-[env(safe-area-inset-top)]">
       <div className="mb-6">
         <button
           onClick={() => setStep("welcome")}

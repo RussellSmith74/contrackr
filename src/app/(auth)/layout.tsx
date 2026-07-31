@@ -56,7 +56,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Right panel */}
       <div className="flex-1 flex flex-col bg-[#F8FAFC]">
         {/* Mobile header only */}
-        <header className="lg:hidden bg-white border-b border-[#E5E7EB] px-4 py-4">
+        <header className="lg:hidden bg-white border-b border-[#E5E7EB] px-4 py-4 pt-[calc(1rem+env(safe-area-inset-top))]">
           <Link href="/">
             <span className="text-[#0A1628] font-black text-xl tracking-tight">Contrakr</span>
           </Link>

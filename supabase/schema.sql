@@ -563,6 +563,36 @@ create policy "Users can remove own blocks" on public.blocks
   for delete using (auth.uid() = blocker_id);
 
 -- ============================================================
+-- PUSH SUBSCRIPTIONS
+-- One row per BROWSER, not per user — phone and laptop are separate rows,
+-- and a notification should reach both.
+-- ============================================================
+create table public.push_subscriptions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+
+create policy "Users can view own push subscriptions" on public.push_subscriptions
+  for select using (auth.uid() = user_id);
+
+create policy "Users can create own push subscriptions" on public.push_subscriptions
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users can delete own push subscriptions" on public.push_subscriptions
+  for delete using (auth.uid() = user_id);
+
+-- Note: /api/notifications/email reads this table with the SERVICE ROLE key,
+-- because it runs with no user session and these policies are scoped to
+-- auth.uid(). That key bypasses RLS entirely — server-side only.
+
+-- ============================================================
 -- FUNCTIONS
 -- ============================================================
 

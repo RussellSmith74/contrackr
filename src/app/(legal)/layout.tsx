@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0A1628]">
-      <header className="bg-[#0A1628] border-b border-[#1a2f50]">
+      <header className="bg-[#0A1628] border-b border-[#1a2f50] pt-[env(safe-area-inset-top)]">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/">
             <span className="text-white font-black text-2xl tracking-tight">Contrakr</span>

@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/utils";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { LocationInput } from "@/components/ui/LocationInput";
+import PushToggle from "@/components/pwa/PushToggle";
 
 interface Profile {
   id: string;
@@ -352,6 +353,11 @@ export default function SettingsPage() {
             Save Changes
           </Button>
         </form>
+
+        {/* Outside the form on purpose — its buttons would otherwise submit it. */}
+        <div className="mt-5">
+          <PushToggle />
+        </div>
       </div>
     </div>
   );

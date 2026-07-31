@@ -155,7 +155,10 @@ export default function Navbar() {
     : [];
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#0A1628] border-b border-[#1a2f50]">
+    // pt-[env(safe-area-inset-top)] keeps the bar clear of the iPhone status
+    // bar / notch when installed to the home screen. Resolves to 0 everywhere
+    // else, so desktop and in-browser are untouched.
+    <nav className="sticky top-0 z-50 bg-[#0A1628] border-b border-[#1a2f50] pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
