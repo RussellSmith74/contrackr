@@ -65,7 +65,9 @@ self.addEventListener("push", (event) => {
   const options = {
     body: payload.body,
     icon: "/icon-192.png",
-    badge: "/badge-72.png",
+    // No `badge` on purpose — Android masks it to a white silhouette using the
+    // alpha channel, and our icon is a solid square. A bad badge looks worse
+    // than the platform default.
     vibrate: [100, 50, 100],
     tag: payload.tag,
     // Replace an existing notification of the same tag rather than stacking
