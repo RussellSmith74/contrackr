@@ -12,6 +12,7 @@ import { getInitials } from "@/lib/utils";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { LocationInput } from "@/components/ui/LocationInput";
 import PushToggle from "@/components/pwa/PushToggle";
+import { compressImage, AVATAR_PRESET } from "@/lib/image";
 
 interface Profile {
   id: string;
@@ -86,12 +87,13 @@ export default function SettingsPage() {
 
     try {
       const supabase = createClient();
-      const ext = file.name.split(".").pop();
+      const compressed = await compressImage(file, AVATAR_PRESET);
+      const ext = compressed.name.split(".").pop();
       const path = `${profile.id}/avatar.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { upsert: true });
+        .upload(path, compressed, { upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);

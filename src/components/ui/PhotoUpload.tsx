@@ -2,8 +2,9 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Camera, X, ImagePlus } from "lucide-react";
+import { Camera, X, ImagePlus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { compressAll } from "@/lib/image";
 import Image from "next/image";
 
 interface PhotoUploadProps {
@@ -24,16 +25,22 @@ export function PhotoUpload({
   className,
 }: PhotoUploadProps) {
   const [previews, setPreviews] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
 
   const onDrop = useCallback(
-    (accepted: File[]) => {
+    async (accepted: File[]) => {
       const remaining = maxFiles - value.length;
       const toAdd = accepted.slice(0, remaining);
-      const newFiles = [...value, ...toAdd];
-      onChange(newFiles);
+      if (toAdd.length === 0) return;
 
-      const newPreviews = toAdd.map((file) => URL.createObjectURL(file));
-      setPreviews((prev) => [...prev, ...newPreviews]);
+      // Downscale before anything else, so previews and the upload both use
+      // the smaller file. A 4MB camera shot becomes a few hundred KB.
+      setProcessing(true);
+      const compressed = await compressAll(toAdd);
+      setProcessing(false);
+
+      onChange([...value, ...compressed]);
+      setPreviews((prev) => [...prev, ...compressed.map((f) => URL.createObjectURL(f))]);
     },
     [value, onChange, maxFiles]
   );
@@ -73,7 +80,9 @@ export function PhotoUpload({
         >
           <input {...getInputProps()} />
           <div className="w-12 h-12 bg-[#F3F4F6] rounded-full flex items-center justify-center">
-            {isDragActive ? (
+            {processing ? (
+              <Loader2 size={22} className="text-[#1E6FFF] animate-spin" />
+            ) : isDragActive ? (
               <ImagePlus size={22} className="text-[#1E6FFF]" />
             ) : (
               <Camera size={22} className="text-[#6B7280]" />
@@ -81,10 +90,12 @@ export function PhotoUpload({
           </div>
           <div className="text-center">
             <p className="text-sm font-semibold text-[#0D0D0D]">
-              {isDragActive ? "Drop photos here" : "Add Photos"}
+              {processing ? "Preparing photos…" : isDragActive ? "Drop photos here" : "Add Photos"}
             </p>
             <p className="text-xs text-[#6B7280] mt-0.5">
-              Tap to choose or drag & drop — JPG, PNG, WEBP
+              {processing
+                ? "Resizing so they upload fast"
+                : "Tap to choose or drag & drop — JPG, PNG, WEBP"}
             </p>
           </div>
           {hint && <p className="text-xs text-[#6B7280] text-center">{hint}</p>}

@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // neither of which work over a plain http LAN address.
   allowedDevOrigins: ["*.trycloudflare.com"],
   images: {
+    // Photos are downscaled in the browser before upload (see src/lib/image.ts),
+    // so they arrive already sized for display. Running them through Vercel's
+    // optimizer on top of that bought us nothing and burned the Hobby quota.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

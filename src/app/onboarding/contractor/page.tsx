@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage, AVATAR_PRESET } from "@/lib/image";
 import { LocationInput } from "@/components/ui/LocationInput";
 
 const STEPS = [
@@ -110,9 +111,10 @@ export default function ContractorOnboarding() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const ext = file.name.split(".").pop();
+      const compressed = await compressImage(file, AVATAR_PRESET);
+      const ext = compressed.name.split(".").pop();
       const path = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, compressed, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const url = `${urlData.publicUrl}?t=${Date.now()}`;
