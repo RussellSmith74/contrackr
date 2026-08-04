@@ -102,3 +102,13 @@ button { cursor: pointer; }
   outline: 2px solid #1E6FFF;
   outline-offset: 2px;
 }
+
+/* Horizontally scrollable rows (filter chips) shouldn't show a scrollbar. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* iOS zooms the viewport when you focus an input under 16px. Setting the
+   floor here is cheaper than auditing every field. */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+}

@@ -303,11 +303,16 @@ function MessagesInner() {
     (c.job_title ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
+  // Pinned to the viewport rather than min-height: this page must not scroll as
+  // a whole, or the chat header (and its back button) scrolls out from under the
+  // sticky navbar. dvh because mobile Safari's vh counts the collapsing browser
+  // chrome. The mobile subtraction accounts for the bottom tab bar, which the
+  // body's own padding sits below.
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A1628] flex flex-col">
+    <div className="h-[calc(100dvh-3.25rem-env(safe-area-inset-bottom))] sm:h-[100dvh] overflow-hidden bg-[#F8FAFC] dark:bg-[#0A1628] flex flex-col">
       <Navbar />
 
-      <div className="flex-1 max-w-6xl w-full mx-auto flex h-[calc(100vh-64px)]">
+      <div className="flex-1 min-h-0 max-w-6xl w-full mx-auto flex">
         {/* Sidebar */}
         <div className={cn(
           "w-full md:w-80 lg:w-96 flex-shrink-0 bg-white dark:bg-[#0D1F3C] border-r border-[#E5E7EB] dark:border-[#1E3A5F] flex flex-col",

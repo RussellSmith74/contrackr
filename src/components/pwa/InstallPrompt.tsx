@@ -69,7 +69,8 @@ export default function InstallPrompt() {
   if (dismissed || (!deferred && !hint)) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pointer-events-none">
+    // Sits above the mobile tab bar (3.25rem) rather than on top of it.
+    <div className="fixed bottom-0 inset-x-0 z-50 p-3 sm:p-4 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
       <div className="pointer-events-auto mx-auto max-w-md bg-white dark:bg-[#0D1F3C] border border-[#E5E7EB] dark:border-[#1E3A5F] rounded-2xl shadow-xl p-4 animate-fadeIn">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#1E6FFF] flex items-center justify-center flex-shrink-0">

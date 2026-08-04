@@ -245,9 +245,13 @@ export default function ContractorProfilePage() {
             <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }} />
           </div>
 
-          <div className="px-6 pb-6">
-            <div className="flex items-end justify-between -mt-12 mb-4">
-              <div className="relative">
+          <div className="px-4 sm:px-6 pb-6">
+            {/* Avatar and actions can't share a row on a phone — the buttons
+                drop below and go full width instead. */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-12 mb-4 gap-3">
+              {/* w-fit: as a flex-col child this would otherwise stretch full
+                  width, throwing the -right-1 verified badge to the card edge. */}
+              <div className="relative w-fit">
                 <Avatar
                   src={avatar}
                   name={c.business_name}
@@ -260,29 +264,35 @@ export default function ContractorProfilePage() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-12">
+              <div className="flex items-center gap-2 w-full sm:w-auto sm:mt-12">
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center w-10 h-10 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] transition-colors"
+                  className="hidden sm:flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] transition-colors"
                   title="Share profile"
                 >
                   {copied ? <Check size={16} className="text-[#059669]" /> : <Share2 size={16} />}
                 </button>
                 {currentUserId === c.user_id ? (
-                  <Link href="/onboarding/contractor">
-                    <Button variant="primary" size="md">
+                  <Link href="/onboarding/contractor" className="flex-1 sm:flex-none">
+                    <Button variant="primary" size="md" className="w-full sm:w-auto">
                       <Pencil size={16} />
                       Edit Profile
                     </Button>
                   </Link>
                 ) : (
                   <>
-                    <Button variant="outline" size="md" onClick={startConversation} loading={messaging}>
+                    <Button
+                      variant="outline"
+                      size="md"
+                      onClick={startConversation}
+                      loading={messaging}
+                      className="flex-1 sm:flex-none whitespace-nowrap"
+                    >
                       <MessageSquare size={16} />
                       Message
                     </Button>
-                    <Link href="/post-job">
-                      <Button variant="primary" size="md">
+                    <Link href="/post-job" className="flex-1 sm:flex-none">
+                      <Button variant="primary" size="md" className="w-full sm:w-auto whitespace-nowrap">
                         Hire Now
                       </Button>
                     </Link>

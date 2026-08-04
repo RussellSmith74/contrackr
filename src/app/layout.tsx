@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import BottomTabBar from "@/components/layout/BottomTabBar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -58,8 +59,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      {/* Bottom padding clears the mobile tab bar (3.25rem + safe area). */}
+      <body className="min-h-full flex flex-col pb-[calc(3.25rem+env(safe-area-inset-bottom))] sm:pb-0">
         {children}
+        <BottomTabBar />
         <ServiceWorkerRegistrar />
         <InstallPrompt />
       </body>

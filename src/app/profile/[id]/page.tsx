@@ -189,31 +189,38 @@ export default function ProfilePage() {
             <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }} />
           </div>
 
-          <div className="px-6 pb-6">
-            <div className="flex items-end justify-between -mt-12 mb-4">
+          <div className="px-4 sm:px-6 pb-6">
+            {/* Stacks on phones — avatar and three controls don't fit one row. */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-12 mb-4 gap-3">
               <Avatar
                 src={profile.avatar_url}
                 name={profile.full_name}
                 size="xl"
                 className="!w-24 !h-24 border-4 border-white dark:border-[#0D1F3C] shadow-md"
               />
-              <div className="flex items-center gap-2 mt-12">
+              <div className="flex items-center gap-2 w-full sm:w-auto sm:mt-12">
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center w-10 h-10 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] transition-colors"
+                  className="flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-full border border-[#E5E7EB] dark:border-[#1E3A5F] text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F3F4F6] dark:hover:bg-[#1E3A5F] transition-colors"
                   title="Share profile"
                 >
                   {copied ? <Check size={16} className="text-[#059669]" /> : <Share2 size={16} />}
                 </button>
                 {!isSelf && (
-                  <Button variant="primary" size="md" onClick={startConversation} loading={messaging}>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={startConversation}
+                    loading={messaging}
+                    className="flex-1 sm:flex-none"
+                  >
                     <MessageSquare size={16} />
                     Message
                   </Button>
                 )}
                 {isSelf && (
-                  <Link href="/settings">
-                    <Button variant="outline" size="md">Edit Profile</Button>
+                  <Link href="/settings" className="flex-1 sm:flex-none">
+                    <Button variant="outline" size="md" className="w-full sm:w-auto">Edit Profile</Button>
                   </Link>
                 )}
                 <UserActions

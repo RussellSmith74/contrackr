@@ -58,7 +58,10 @@ export default function Navbar() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) { setUser(null); setContractorProfileId(null); return; }
-      loadUser();
+      // Deferred out of the callback frame: loadUser() calls supabase.auth
+      // .getUser(), and the client holds a lock while dispatching auth events,
+      // so calling it synchronously here deadlocks.
+      setTimeout(() => loadUser(), 0);
     });
 
     return () => subscription.unsubscribe();
@@ -164,7 +167,7 @@ export default function Navbar() {
 
           {/* Wordmark */}
           <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="text-white font-black text-2xl tracking-tight">
+            <span className="text-white font-black text-xl sm:text-2xl tracking-tight">
               Contrakr
             </span>
           </Link>
@@ -197,9 +200,11 @@ export default function Navbar() {
           <div className="flex items-center gap-1">
             {user ? (
               <>
+                {/* Search and Messages live in the bottom tab bar on mobile,
+                    so they'd be duplicated here. Hidden below sm. */}
                 <Link
                   href="/search"
-                  className="p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors md:hidden"
+                  className="p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors hidden sm:flex md:hidden"
                 >
                   <Search size={20} />
                 </Link>
@@ -207,7 +212,7 @@ export default function Navbar() {
                 {/* Messages icon with unread badge */}
                 <Link
                   href="/messages"
-                  className="relative p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                  className="relative p-2.5 text-[#94A3B8] hover:text-white hover:bg-white/10 rounded-xl transition-colors hidden sm:block"
                 >
                   <MessageSquare size={20} />
                   {unreadMessages > 0 && (

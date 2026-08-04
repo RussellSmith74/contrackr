@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone, Award, Flag } from "lucide-react";
+import { Clock, ThumbsUp, MessageSquare, DollarSign, Send, Briefcase, ChevronRight, Plus, Sparkles, Trash2, Pencil, Check, X, BadgeCheck, ShieldCheck, Star, Crown, Camera, Tag, Megaphone, Award, Flag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
@@ -182,7 +182,9 @@ export default function FeedPage() {
     <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0A1628]">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 py-7">
+      {/* Edge-to-edge on phones — the horizontal padding costs real width on a
+          375px screen. Restored from sm: up. */}
+      <div className="max-w-5xl mx-auto px-0 sm:px-4 py-4 sm:py-7">
         <div className="flex gap-6 items-start">
 
           {/* ── Main feed ── */}
@@ -190,7 +192,7 @@ export default function FeedPage() {
 
             {/* Composer */}
             {currentUserId && (
-              <div className="bg-white dark:bg-[#0D1F3C] rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] p-4 mb-5 shadow-sm dark:shadow-none">
+              <div className="bg-white dark:bg-[#0D1F3C] rounded-none sm:rounded-2xl border-y sm:border border-[#E2E8F0] dark:border-[#1E3A5F] p-4 mb-3 sm:mb-5 shadow-sm dark:shadow-none">
                 <div className="flex items-center gap-3">
                   <Link href={`/profile/${currentUserId}`} className="flex-shrink-0">
                     <Avatar src={currentUserAvatar} name={currentUserName || "?"} size="md" />
@@ -237,7 +239,7 @@ export default function FeedPage() {
             )}
 
             {/* Filter tabs */}
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-3 sm:mb-5 px-3 sm:px-0 overflow-x-auto no-scrollbar">
               {FEED_FILTERS.map((f) => (
                 <button
                   key={f}
@@ -255,10 +257,10 @@ export default function FeedPage() {
             </div>
 
             {/* Posts */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:gap-4">
               {loading
                 ? [1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white dark:bg-[#0D1F3C] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-6 animate-pulse shadow-sm dark:shadow-none">
+                    <div key={i} className="bg-white dark:bg-[#0D1F3C] border-y sm:border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-none sm:rounded-2xl p-6 animate-pulse shadow-sm dark:shadow-none">
                       <div className="flex items-center gap-3 mb-5">
                         <div className="w-11 h-11 bg-[#E2E8F0] dark:bg-[#1E3A5F] rounded-full" />
                         <div className="flex-1">
@@ -592,7 +594,7 @@ function FeedCard({
 
   return (
     <div className={cn(
-      "bg-white dark:bg-[#0D1F3C] rounded-xl border border-[#E2E8F0] dark:border-[#1E3A5F] overflow-hidden transition-colors duration-150",
+      "bg-white dark:bg-[#0D1F3C] rounded-none sm:rounded-xl border-y sm:border border-[#E2E8F0] dark:border-[#1E3A5F] overflow-hidden transition-colors duration-150",
       "hover:border-[#CBD5E1] dark:hover:border-[#2A4A73]"
     )}>
       <div className={cn("p-5", post.photos && post.photos.length > 0 ? "pb-4" : "")}>
@@ -602,10 +604,20 @@ function FeedCard({
             <Avatar src={post.author.avatar} name={post.author.name} size="md" />
           </Link>
           <div className="flex-1 min-w-0">
+            {/* Actions sit beside the NAME row only. When they shared a column
+                with the meta line too, they squeezed it hard enough to hide
+                the timestamp and category. */}
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Link href={`/profile/${post.author_id}`} className="font-semibold text-[#0F172A] dark:text-white text-[15px] leading-tight hover:underline">{post.author.name}</Link>
+              <div className="min-w-0 flex-1">
+                {/* No flex-wrap: the name truncates rather than pushing badges
+                    onto a second line. */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Link
+                    href={`/profile/${post.author_id}`}
+                    className="font-semibold text-[#0F172A] dark:text-white text-[15px] leading-tight hover:underline truncate"
+                  >
+                    {post.author.name}
+                  </Link>
                   {post.author.is_founder && (
                     <Crown size={15} className="text-[#D4AF37] fill-[#D4AF37] flex-shrink-0" aria-label="Founder" />
                   )}
@@ -622,32 +634,9 @@ function FeedCard({
                     <Star size={13} className="text-[#D97706] fill-[#D97706] flex-shrink-0" aria-label="Day One Contractor" />
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap text-[12.5px] text-[#94A3B8] dark:text-[#64748B]">
-                  <span className="capitalize">{post.author.role}</span>
-                  {post.location && (
-                    <>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <MapPin size={10} />{post.location}
-                      </span>
-                    </>
-                  )}
-                  <span>·</span>
-                  <span>{formatRelativeTime(post.time)}</span>
-                  {post.category && (
-                    <>
-                      <span>·</span>
-                      <span className="text-[#1E6FFF] dark:text-[#60A5FA] font-medium">
-                        {categoryIcon && <span className="mr-0.5">{categoryIcon}</span>}{categoryLabel}
-                      </span>
-                    </>
-                  )}
-                </div>
+
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className={cn("text-[10px] font-semibold px-2 py-1 rounded-md tracking-wide whitespace-nowrap", type.light, type.dark)}>
-                  {type.label}
-                </span>
                 {currentUserId && currentUserId !== post.author_id && (
                   <button
                     onClick={() => setReporting(true)}
@@ -677,6 +666,33 @@ function FeedCard({
                 </div>
                 )}
               </div>
+            </div>
+
+            {/* Full width — one line, truncates with an ellipsis instead of
+                wrapping each separator onto its own line. */}
+            <div className="flex items-center gap-1.5 mt-1 min-w-0">
+              <span
+                className={cn(
+                  "text-[10px] font-semibold px-1.5 py-0.5 rounded tracking-wide whitespace-nowrap flex-shrink-0",
+                  type.light,
+                  type.dark
+                )}
+              >
+                {type.label}
+              </span>
+              <p className="text-[12.5px] text-[#94A3B8] dark:text-[#64748B] truncate min-w-0">
+                <span className="capitalize">{post.author.role}</span>
+                {post.location && <> · {post.location}</>}
+                {" · "}
+                {formatRelativeTime(post.time)}
+                {post.category && (
+                  <span className="text-[#1E6FFF] dark:text-[#60A5FA] font-medium">
+                    {" · "}
+                    {categoryIcon && <span className="mr-0.5">{categoryIcon}</span>}
+                    {categoryLabel}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         </div>

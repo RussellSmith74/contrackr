@@ -53,13 +53,13 @@ export function PhotoLightbox({ photos, index, onClose, onIndexChange }: PhotoLi
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-4 right-4 p-2.5 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
+        className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-3 text-white/90 bg-black/40 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
       >
         <X size={24} />
       </button>
 
       {photos.length > 1 && (
-        <span className="absolute top-6 left-1/2 -translate-x-1/2 text-white/70 text-[13px] font-semibold tracking-wide">
+        <span className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 text-white/70 text-[13px] font-semibold tracking-wide">
           {index + 1} / {photos.length}
         </span>
       )}
