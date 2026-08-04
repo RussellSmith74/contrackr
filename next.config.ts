@@ -6,10 +6,12 @@ const nextConfig: NextConfig = {
   // neither of which work over a plain http LAN address.
   allowedDevOrigins: ["*.trycloudflare.com"],
   images: {
-    // Photos are downscaled in the browser before upload (see src/lib/image.ts),
-    // so they arrive already sized for display. Running them through Vercel's
-    // optimizer on top of that bought us nothing and burned the Hobby quota.
-    unoptimized: true,
+    // Do NOT set unoptimized here. Turning the optimizer off made the feed
+    // serve full-size camera originals; a 4000px JPEG decodes to ~48MB in
+    // memory, and enough of them on one page make iOS discard the whole
+    // document's backing store — the feed renders blank while keeping its
+    // scroll height. New uploads are downscaled (src/lib/image.ts), but every
+    // photo uploaded before that change is still full size.
     remotePatterns: [
       {
         protocol: "https",

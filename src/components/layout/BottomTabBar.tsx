@@ -102,9 +102,13 @@ export default function BottomTabBar() {
     { href: profileHref, label: "You", icon: User },
   ];
 
+  // Solid background, no backdrop-blur: backdrop-filter on a fixed element over
+  // a long scrolling list makes iOS WebKit discard content tiles and never
+  // repaint them — the feed goes blank while keeping its scroll height. The
+  // blur bought nothing here anyway, navy sitting on navy.
   return (
     <nav
-      className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0A1628]/95 backdrop-blur border-t border-[#1a2f50] pb-[env(safe-area-inset-bottom)]"
+      className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0A1628] border-t border-[#1a2f50] pb-[env(safe-area-inset-bottom)]"
       aria-label="Primary"
     >
       <div className="flex items-stretch">
