@@ -37,7 +37,7 @@ interface Comment {
   id: string;
   content: string;
   created_at: string;
-  profiles: { full_name: string; avatar_url: string | null } | null;
+  profiles: { id: string; full_name: string; avatar_url: string | null } | null;
 }
 
 export default function PostPage() {
@@ -147,7 +147,7 @@ export default function PostPage() {
       // Fetch comments
       const { data: commentData } = await supabase
         .from("comments")
-        .select("id, content, created_at, profiles(full_name, avatar_url)")
+        .select("id, content, created_at, profiles(id, full_name, avatar_url)")
         .eq("post_id", id)
         .order("created_at", { ascending: true });
       if (commentData) setComments(commentData as unknown as Comment[]);
@@ -183,7 +183,7 @@ export default function PostPage() {
     const { data, error } = await supabase
       .from("comments")
       .insert({ post_id: id, author_id: myId, content: commentText.trim() })
-      .select("id, content, created_at, profiles(full_name, avatar_url)")
+      .select("id, content, created_at, profiles(id, full_name, avatar_url)")
       .single();
     if (!error && data) {
       setComments((prev) => [...prev, data as unknown as Comment]);
@@ -556,10 +556,25 @@ export default function PostPage() {
             <div className="flex flex-col gap-4">
               {comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-3">
-                  <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
+                  {c.profiles?.id ? (
+                    <Link href={`/profile/${c.profiles.id}`} className="flex-shrink-0">
+                      <Avatar name={c.profiles.full_name} src={c.profiles.avatar_url ?? undefined} size="sm" />
+                    </Link>
+                  ) : (
+                    <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl px-4 py-3">
-                      <p className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-1">{c.profiles?.full_name ?? "Anonymous"}</p>
+                      {c.profiles?.id ? (
+                        <Link
+                          href={`/profile/${c.profiles.id}`}
+                          className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-1 inline-block hover:underline"
+                        >
+                          {c.profiles.full_name}
+                        </Link>
+                      ) : (
+                        <p className="text-[13px] font-bold text-[#0F172A] dark:text-white mb-1">Anonymous</p>
+                      )}
                       <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-relaxed">{c.content}</p>
                     </div>
                     <p className="text-[11px] text-[#94A3B8] mt-1 ml-3">{formatRelativeTime(c.created_at)}</p>

@@ -376,7 +376,7 @@ interface Comment {
   id: string;
   content: string;
   created_at: string;
-  profiles: { full_name: string; avatar_url: string | null } | null;
+  profiles: { id: string; full_name: string; avatar_url: string | null } | null;
 }
 
 async function createNotification(
@@ -496,7 +496,7 @@ function FeedCard({
   const loadComments = async () => {
     const { data } = await createClient()
       .from("comments")
-      .select("id, content, created_at, profiles(full_name, avatar_url)")
+      .select("id, content, created_at, profiles(id, full_name, avatar_url)")
       .eq("post_id", post.id)
       .order("created_at", { ascending: true });
     if (data) {
@@ -521,7 +521,7 @@ function FeedCard({
     const { data, error } = await supabase
       .from("comments")
       .insert({ post_id: post.id, author_id: currentUserId, content: commentText.trim() })
-      .select("id, content, created_at, profiles(full_name, avatar_url)")
+      .select("id, content, created_at, profiles(id, full_name, avatar_url)")
       .single();
 
     if (!error && data) {
@@ -895,10 +895,25 @@ function FeedCard({
             )}
             {(showAllComments ? comments : comments.slice(-2)).map((c) => (
               <div key={c.id} className="flex items-start gap-2.5">
-                <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
+                {c.profiles?.id ? (
+                  <Link href={`/profile/${c.profiles.id}`} className="flex-shrink-0">
+                    <Avatar name={c.profiles.full_name} src={c.profiles.avatar_url ?? undefined} size="sm" />
+                  </Link>
+                ) : (
+                  <Avatar name={c.profiles?.full_name ?? "?"} src={c.profiles?.avatar_url ?? undefined} size="sm" />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-2xl px-4 py-2.5">
-                    <p className="text-[13px] font-semibold text-[#0F172A] dark:text-white mb-0.5">{c.profiles?.full_name ?? "Anonymous"}</p>
+                    {c.profiles?.id ? (
+                      <Link
+                        href={`/profile/${c.profiles.id}`}
+                        className="text-[13px] font-semibold text-[#0F172A] dark:text-white mb-0.5 inline-block hover:underline"
+                      >
+                        {c.profiles.full_name}
+                      </Link>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-[#0F172A] dark:text-white mb-0.5">Anonymous</p>
+                    )}
                     <p className="text-[14px] text-[#475569] dark:text-[#E5E7EB] leading-snug">{c.content}</p>
                   </div>
                   <p className="text-[11px] text-[#94A3B8] dark:text-[#4B6A8A] mt-1 ml-3">{formatRelativeTime(c.created_at)}</p>
