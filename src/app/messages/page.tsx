@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
-import { Send, Search, ArrowLeft, MessageSquare } from "lucide-react";
+import { Send, Search, ArrowLeft, MessageSquare, SquarePen } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { fetchBlockedIds } from "@/lib/moderation";
+import NewChatSheet, { type PersonResult } from "@/components/messages/NewChatSheet";
 
 interface ChatItem {
   id: string;
@@ -39,6 +40,7 @@ function MessagesInner() {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -298,6 +300,21 @@ function MessagesInner() {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
+  // Reuses the same find-or-create path as the ?with= deep link, so starting a
+  // chat from search and from a profile end up in the same thread.
+  const startChatWith = async (person: PersonResult) => {
+    if (!myId) return;
+    setNewChatOpen(false);
+
+    const chatId = await findOrCreateDirectChat(myId, person.id);
+    if (!chatId) return;
+
+    const refreshed = await loadAllChats(myId);
+    setChats(refreshed);
+    const chat = refreshed.find((c) => c.id === chatId);
+    if (chat) openChat(chat);
+  };
+
   const filtered = chats.filter((c) =>
     c.other_name.toLowerCase().includes(search.toLowerCase()) ||
     (c.job_title ?? "").toLowerCase().includes(search.toLowerCase())
@@ -321,6 +338,14 @@ function MessagesInner() {
           <div className="px-4 py-4 border-b border-[#E5E7EB] dark:border-[#1E3A5F]">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-black text-[#0A1628] dark:text-white text-lg">Messages</h2>
+              <button
+                onClick={() => setNewChatOpen(true)}
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-[#1E6FFF] hover:bg-[#1558CC] text-white transition-colors"
+                title="New message"
+                aria-label="New message"
+              >
+                <SquarePen size={17} />
+              </button>
             </div>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
@@ -477,6 +502,12 @@ function MessagesInner() {
           </div>
         )}
       </div>
+
+      <NewChatSheet
+        open={newChatOpen}
+        onClose={() => setNewChatOpen(false)}
+        onSelect={startChatWith}
+      />
     </div>
   );
 }
