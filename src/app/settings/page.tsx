@@ -13,6 +13,7 @@ import { useDarkMode } from "@/lib/useDarkMode";
 import { LocationInput } from "@/components/ui/LocationInput";
 import PushToggle from "@/components/pwa/PushToggle";
 import { compressImage, AVATAR_PRESET } from "@/lib/image";
+import NotificationPreferences from "@/components/settings/NotificationPreferences";
 
 interface Profile {
   id: string;
@@ -356,8 +357,9 @@ export default function SettingsPage() {
           </Button>
         </form>
 
-        {/* Outside the form on purpose — its buttons would otherwise submit it. */}
-        <div className="mt-5">
+        {/* Outside the form on purpose — their buttons would otherwise submit it. */}
+        <div className="mt-5 flex flex-col gap-5">
+          <NotificationPreferences role={profile.role} />
           <PushToggle />
         </div>
       </div>

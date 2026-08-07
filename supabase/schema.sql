@@ -30,6 +30,11 @@ create table public.profiles (
   search_radius integer default 50,
   is_admin boolean default false,
   is_founder boolean default false,
+  -- Master switch for notification EMAILS. Push is opt-in per device instead,
+  -- switched off by deleting the push_subscriptions row.
+  email_notifications boolean not null default true,
+  -- Contractors only: alerts for new jobs matching their trades and radius.
+  job_match_alerts boolean not null default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -679,6 +684,62 @@ begin
 end;
 $$;
 
+-- When a job is posted, notify contractors whose trades and radius match.
+-- Inserting into notifications is enough — the existing webhook on that table
+-- fans each row out to email and push.
+create or replace function public.notify_matching_contractors()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  r record;
+begin
+  if new.status is distinct from 'open' then
+    return new;
+  end if;
+
+  for r in
+    select cp.user_id
+    from public.contractor_profiles cp
+    join public.profiles p on p.id = cp.user_id
+    where p.job_match_alerts is true
+      and cp.user_id <> new.customer_id
+      and new.category = any(cp.categories)
+      -- Distance in miles. Missing coordinates on either side fall through to
+      -- notifying: a missed nearby job is worse than a slightly-far one.
+      and (
+        new.lat is null or new.lng is null or cp.lat is null or cp.lng is null
+        or 3959 * acos(least(1, greatest(-1,
+             cos(radians(new.lat)) * cos(radians(cp.lat)) *
+             cos(radians(cp.lng) - radians(new.lng)) +
+             sin(radians(new.lat)) * sin(radians(cp.lat))
+           ))) <= coalesce(p.search_radius, 50)
+      )
+      -- Cap: 5 job alerts per contractor per rolling 24h, so this can't become
+      -- the reason someone mutes the app.
+      and (
+        select count(*) from public.notifications n
+        where n.user_id = cp.user_id
+          and n.type = 'job_match'
+          and n.created_at > now() - interval '24 hours'
+      ) < 5
+  loop
+    insert into public.notifications (user_id, type, title, body, data)
+    values (
+      r.user_id,
+      'job_match',
+      'New job near you: ' || new.title,
+      left(new.description, 140),
+      jsonb_build_object('link', '/post/' || new.id || '?s=job_post')
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
 -- Profile completeness score shown on the contractor dashboard.
 create or replace function public.compute_profile_completeness(p_id uuid)
 returns integer
@@ -721,6 +782,10 @@ create trigger sync_job_completion_from_job
 create trigger on_review_created
   after insert on public.reviews
   for each row execute function public.update_contractor_rating();
+
+create trigger on_job_posted
+  after insert on public.job_posts
+  for each row execute function public.notify_matching_contractors();
 
 -- Supabase Database Webhook → /api/notifications/email (sends via Resend).
 -- Created through the Supabase dashboard, not by running this file.

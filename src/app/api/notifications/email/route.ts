@@ -2,12 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
 // Notification types that are worth an email. Likes are intentionally excluded —
-// too frequent, would spam inboxes.
-const EMAILABLE_TYPES = new Set(["message", "bid", "comment", "review"]);
+// too frequent, would spam inboxes. job_match is capped in the database trigger
+// and has its own opt-out (profiles.job_match_alerts).
+const EMAILABLE_TYPES = new Set(["message", "bid", "comment", "review", "job_match"]);
 
 // Same set for push. Kept separate so the two can diverge later without one
 // silently changing the other.
-const PUSHABLE_TYPES = new Set(["message", "bid", "comment", "review"]);
+const PUSHABLE_TYPES = new Set(["message", "bid", "comment", "review", "job_match"]);
 
 const SITE_URL = "https://contrakr.com";
 
@@ -170,12 +171,18 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, full_name")
+    .select("email, full_name, email_notifications")
     .eq("id", record.user_id)
     .single();
 
   if (!profile?.email) {
     return Response.json({ pushed, skipped: "no email on file" });
+  }
+
+  // Opted out in Settings. Push is unaffected — that's opt-in per device and
+  // switched off by removing the subscription instead.
+  if (profile.email_notifications === false) {
+    return Response.json({ pushed, skipped: "email notifications disabled" });
   }
 
   const link = record.data?.link ? `${SITE_URL}${record.data.link}` : `${SITE_URL}/feed`;
